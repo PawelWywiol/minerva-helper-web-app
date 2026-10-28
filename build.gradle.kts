@@ -22,6 +22,8 @@ ktlint {
 dependencies {
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.sqlite.jdbc)
     runtimeOnly(libs.slf4j.simple)
 
     testImplementation(kotlin("test"))
