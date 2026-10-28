@@ -6,7 +6,7 @@ RUN ./gradlew --no-daemon dependencies > /dev/null
 COPY src src
 RUN ./gradlew --no-daemon installDist
 
-FROM eclipse-temurin:25.0.4.1_1-jre
+FROM eclipse-temurin:26.0.2_10-jre
 LABEL org.opencontainers.image.source="https://github.com/PawelWywiol/minerva-helper-web-app"
 LABEL org.opencontainers.image.licenses="MIT"
 COPY --from=build /src/build/install/minerva-helper-web-app /app
