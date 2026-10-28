@@ -25,7 +25,7 @@ class RequestGuardTest {
     @Test
     fun `health answers on an ip host`() =
         guarded {
-            val response = client.get("/api/health") { header(HttpHeaders.Host, "192.168.1.10:8090") }
+            val response = client.get("/api/health") { header(HttpHeaders.Host, "192.0.2.10:8090") }
             assertEquals(HttpStatusCode.OK, response.status)
         }
 
