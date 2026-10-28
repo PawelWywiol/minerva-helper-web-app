@@ -1,0 +1,7 @@
+blockExoticSubdeps: true
+minimumReleaseAge: 1440
+optimisticRepeatInstall: true
+strictDepBuilds: true
+verifyDepsBeforeRun: install
+allowBuilds:
+  lefthook: true
