@@ -43,15 +43,20 @@ fun words(text: String): List<String> =
         .split(SEPARATORS)
         .filter { it.isNotEmpty() }
 
-// what a name is a version of: "Super Mario Bros. 3 (Europe).zip" and "Super Mario Bros. 3 (1988)(Nintendo)(US).zip"
-// both read "super mario bros 3"
+private val VERSION = Regex("\\s+v\\d+(\\.\\d+)*[a-z]?$", RegexOption.IGNORE_CASE)
+
+// what a name is a version of, as a set of words: No-Intro's "Legend of Zelda, The (Europe)" and TOSEC's
+// "The Legend of Zelda (1987)(Nintendo)(US)" or "Alter Ego v1.04 (2024)" and "Alter Ego (USA)" read alike
 fun titleOf(name: String): String =
     words(
         name
             .replace(EXTENSION, "")
             .substringBefore(" (")
-            .substringBefore(" ["),
-    ).joinToString(" ")
+            .substringBefore(" [")
+            .replace(VERSION, ""),
+    ).filterNot { it in STOPWORDS }
+        .toSortedSet()
+        .joinToString(" ")
 
 // repeats and filler words do not decide a match, unless filler is all there is
 fun queryWords(words: List<String>): List<String> =
