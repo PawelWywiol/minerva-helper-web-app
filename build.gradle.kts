@@ -23,6 +23,8 @@ tasks.jar {
 
 application {
     mainClass = "io.github.pawelwywiol.minervaweb.MainKt"
+    // sqlite-jdbc and libtorrent4j load native libraries
+    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
 }
 
 ktlint {
