@@ -5,6 +5,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import org.libtorrent4j.AlertListener
 import org.libtorrent4j.Priority
 import org.libtorrent4j.SessionManager
 import org.libtorrent4j.SessionParams
@@ -12,12 +13,15 @@ import org.libtorrent4j.SettingsPack
 import org.libtorrent4j.TcpEndpoint
 import org.libtorrent4j.TorrentHandle
 import org.libtorrent4j.TorrentInfo
+import org.libtorrent4j.alerts.Alert
+import org.libtorrent4j.alerts.AlertType
 import org.libtorrent4j.swig.add_torrent_params
 import org.libtorrent4j.swig.error_code
 import org.libtorrent4j.swig.load_torrent_limits
 import org.libtorrent4j.swig.settings_pack
 import org.libtorrent4j.swig.torrent_flags_t
 import org.libtorrent4j.swig.torrent_info
+import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -46,7 +50,22 @@ class SelectiveDownloader(
     private val peers: List<TcpEndpoint> = emptyList(),
     private val extraSettings: SettingsPack.() -> Unit = {},
 ) : AutoCloseable {
-    private val session by lazy { SessionManager().also { it.start(SessionParams(noSharingSettings())) } }
+    private val log = LoggerFactory.getLogger(SelectiveDownloader::class.java)
+    private val session by lazy {
+        SessionManager().also {
+            it.addListener(problems)
+            it.start(SessionParams(noSharingSettings()))
+        }
+    }
+
+    // disk and hash problems are otherwise silent: libtorrent reports them only as alerts
+    private val problems =
+        object : AlertListener {
+            override fun types() =
+                intArrayOf(AlertType.FILE_ERROR.swig(), AlertType.TORRENT_ERROR.swig(), AlertType.HASH_FAILED.swig())
+
+            override fun alert(alert: Alert<*>) = log.warn("libtorrent: {}", alert.message())
+        }
 
     class Stalled(
         val peers: Int,
@@ -83,7 +102,7 @@ class SelectiveDownloader(
             var wanted = info.validate(wantedNow())
             require(wanted.isNotEmpty()) { "no valid file indexes for ${torrent.fileName}" }
 
-            val isIntact =
+            val isIntact: (Int, Path) -> Boolean =
                 intact ?: { index, file -> file.isRegularFile() && file.fileSize() == info.files().fileSize(index) }
             Files.createDirectories(targetDir)
             session.download(info, targetDir.toFile(), null, info.priorities(wanted), peers, torrent_flags_t())
@@ -111,6 +130,12 @@ class SelectiveDownloader(
                         }
                         // still not on disk after a while: let libtorrent re-read and fetch what is missing
                         if (++unverifiedFor >= RECHECK_AFTER_TICKS) {
+                            log.warn(
+                                "{}: wanted files not intact, state {}, error '{}', rechecking",
+                                torrent.fileName,
+                                status.state(),
+                                status.errorCode().message,
+                            )
                             handle.forceRecheck()
                             unverifiedFor = 0
                             rechecks++
