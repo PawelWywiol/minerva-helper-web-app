@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.2](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.1...v0.1.2) (2026-10-29)
+
+### Features
+
+* redesign ui with system-aware search and side details ([#14](https://github.com/PawelWywiol/minerva-helper-web-app/issues/14)) ([4574814](https://github.com/PawelWywiol/minerva-helper-web-app/commit/45748147d66d433889faf2e36a664fcbf73b2077))
+
 ## [0.1.1](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.0...v0.1.1) (2026-10-29)
 
 ### Bug Fixes
