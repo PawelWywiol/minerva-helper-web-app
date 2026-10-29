@@ -1,8 +1,5 @@
 package io.github.pawelwywiol.minervaweb.web
 
-import io.github.pawelwywiol.minervaweb.catalog.CatalogService
-import io.github.pawelwywiol.minervaweb.catalog.CatalogSync
-import io.github.pawelwywiol.minervaweb.catalog.HashesDownloader
 import io.github.pawelwywiol.minervaweb.catalog.TestCatalog
 import io.github.pawelwywiol.minervaweb.module
 import io.ktor.client.request.get
@@ -12,17 +9,13 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
-import java.net.URI
 import java.net.URLEncoder
-import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.AfterTest
@@ -42,9 +35,8 @@ class CatalogRoutesTest {
         block: suspend ApplicationTestBuilder.() -> Unit,
     ) = testApplication {
         if (withCatalog) TestCatalog.catalog(dir)
-        val downloader = HashesDownloader(HttpClient.newHttpClient(), URI("http://127.0.0.1:9/none"))
-        val catalog = CatalogService(CatalogSync(dir, downloader), CoroutineScope(Dispatchers.Default))
-        application { module(emptySet(), catalog) }
+        val services = testServices(dir)
+        application { module(emptySet(), services) }
         block()
     }
 

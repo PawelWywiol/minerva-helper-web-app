@@ -1,6 +1,6 @@
 FROM gradle:9.8.2-jdk25 AS build
 WORKDIR /src
-COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
+COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties package.json ./
 COPY gradle gradle
 RUN ./gradlew --no-daemon dependencies > /dev/null
 COPY src src
@@ -14,4 +14,5 @@ USER 1000:1000
 EXPOSE 8080
 VOLUME ["/data", "/library"]
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 CMD ["/app/bin/minerva-helper-web-app", "healthcheck"]
+ENV LIBTORRENT4J_JNI_PATH=/app/native/lib/x86_64/libtorrent4j.so
 ENTRYPOINT ["/app/bin/minerva-helper-web-app"]

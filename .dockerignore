@@ -3,5 +3,6 @@
 !settings.gradle.kts
 !build.gradle.kts
 !gradle.properties
+!package.json
 !gradle/
 !src/
