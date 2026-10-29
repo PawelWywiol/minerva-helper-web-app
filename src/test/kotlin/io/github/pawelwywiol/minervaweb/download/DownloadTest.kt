@@ -42,11 +42,29 @@ class DownloadTest {
 
     private fun downloader() = SelectiveDownloader(peers = listOf(swarm.peer)) { isolate() }
 
+    private fun fetch(
+        name: String,
+        target: Path,
+    ): SelectiveDownloader.Result {
+        val expected = swarm.content.getValue(name)
+        val wanted = swarm.index(name)
+        return downloader().use {
+            runBlocking {
+                it.download(
+                    swarm.torrent,
+                    target,
+                    { setOf(wanted) },
+                    { _, file -> file.readBytes().contentEquals(expected) },
+                ) {}
+            }
+        }
+    }
+
     @Test
     fun `fetches only the wanted file and uploads no content`() {
         val target = dir.resolve("staging")
         val wanted = swarm.index("b.nes")
-        val result = downloader().use { runBlocking { it.download(swarm.torrent, target, { setOf(wanted) }) {} } }
+        val result = fetch("b.nes", target)
 
         assertEquals(0L, result.payloadUploaded)
         assertContentEquals(
@@ -54,6 +72,16 @@ class DownloadTest {
             target.resolve(swarm.info.files().filePath(wanted)).readBytes(),
         )
         assertFalse(target.resolve(swarm.info.files().filePath(swarm.index("a.nes"))).exists())
+    }
+
+    @Test
+    fun `every file arrives intact, including the last piece next to ignored files`() {
+        for (name in listOf("c.nes", "a.nes", "b.nes", "c.nes", "a.nes", "b.nes")) {
+            val target = dir.resolve("each-$name-${System.nanoTime()}")
+            fetch(name, target)
+            val file = target.resolve(swarm.info.files().filePath(swarm.index(name)))
+            assertContentEquals(swarm.content.getValue(name), file.readBytes(), name)
+        }
     }
 
     @Test
