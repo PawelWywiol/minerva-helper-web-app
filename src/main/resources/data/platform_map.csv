@@ -23,7 +23,7 @@ eXo,eXoDOS,dos,alias,15586
 No-Intro,IBM - PC and Compatibles (Digital) (DLsite) (Hentai),,unmapped,15571
 No-Intro,Sony - PlayStation 3 (PSN) (Updates),ps3,auto,15383
 TOSEC,Atari/8bit,atari800,alias,14703
-No-Intro,Microsoft - Xbox 360 (Digital),,none,14375
+No-Intro,Microsoft - Xbox 360 (Digital),xbox360,manual,14375
 TOSEC,Nintendo/Famicom & Entertainment System,nes,alias,12979
 No-Intro,IBM - PC and Compatibles (Digital) (GOG),,unmapped,12518
 Redump,Sony - PlayStation 2,ps2,auto,12157
@@ -36,7 +36,7 @@ Laserdisc Collection,Hypseus Singe,daphne,alias,8681
 Internet Archive,sketch_the_cow,,none,8597
 bitsavers,components,,none,8270
 FinalBurn Neo,arcade,arcade,collection,8187
-TOSEC,Tandy Radio Shack/TRS-80 Model I,,none,8165
+TOSEC,Tandy Radio Shack/TRS-80 Model I,trs-80,manual,8165
 No-Intro,Nintendo - Nintendo DS (Decrypted),nds,auto,7770
 No-Intro,Nintendo - Nintendo DS (Encrypted),nds,auto,7758
 TOSEC-PIX,IBM/PC Compatibles,pc,alias,7404
@@ -61,26 +61,26 @@ Redump,Sony - PlayStation 3 - Disc Keys,,unmapped,4768
 TOSEC,Commodore/VIC20,vic20,auto,4726
 No-Intro,Nintendo - Super Nintendo Entertainment System,snes,alias,4642
 No-Intro,Various - itch.io,,unmapped,4574
-Redump,Microsoft - Xbox 360,,unmapped,4459
+Redump,Microsoft - Xbox 360,xbox360,manual,4459
 Internet Archive,renascene,,none,4386
 No-Intro,Unofficial - Obscure Gamers,,unmapped,4250
 No-Intro,Sony - PlayStation Portable (PSN) (Decrypted),psp,auto,4250
-No-Intro,Sega - Mega Drive - Genesis,,unmapped,4233
+No-Intro,Sega - Mega Drive - Genesis,genesis,manual,4233
 TOSEC,NEC/PC-8801,pc88,alias,4218
 TOSEC,Texas Instruments/TI-83,,unmapped,4085
 TOSEC,Sharp/X68000,x68000,alias,4046
 Internet Archive,kodi_amp_spmc_canada,,none,3979
 TOSEC,Nintendo/64,n64,auto,3920
-TOSEC,Nintendo/Super Famicom & Super Entertainment System,,unmapped,3914
+TOSEC,Nintendo/Super Famicom & Super Entertainment System,snes,manual,3914
 Eggman's Arcade Repository,!EXTRAS,arcade,collection,3871
-Redump,Nintendo - Wii - NKit RVZ [zstd-19-128k],,unmapped,3847
+Redump,Nintendo - Wii - NKit RVZ [zstd-19-128k],wii,manual,3847
 No-Intro,IBM - PC and Compatibles (Digital) (NovelGameCollection),,unmapped,3825
 No-Intro,Nintendo - Wii U (Digital) (CDN),wiiu,auto,3776
 Internet Archive,aitus95,,none,3751
 No-Intro,Nintendo - Game Boy Advance,gba,auto,3688
 Redump,Sony - PlayStation Portable,psp,auto,3637
 No-Intro,Sony - PlayStation Vita (PSN) (Updates),psvita,auto,3628
-TOSEC,Atari/2600 & VCS,,unmapped,3438
+TOSEC,Atari/2600 & VCS,atari2600,manual,3438
 No-Intro,IBM - PC and Compatibles (Digital) (Desura),,unmapped,3397
 TOSEC,MSX/MSX2,msx2,auto,3333
 No-Intro,Unofficial - Nintendo - Wii (Digital) (Deprecated) (WAD),wii,auto,3293
@@ -97,12 +97,12 @@ No-Intro,Nintendo - Nintendo Entertainment System (Headered) (Aftermarket),nes,a
 No-Intro,Nintendo - Nintendo Entertainment System (Headerless) (Aftermarket),nes,auto,2917
 No-Intro,Nintendo - Wii (Digital) (CDN),wii,auto,2895
 FinalBurn Neo,megadrive,arcade,collection,2857
-TOSEC,Tandy Radio Shack/TRS-80 Model 4,,unmapped,2843
-TOSEC,Bally/Professional Arcade & Astrocade,,unmapped,2831
+TOSEC,Tandy Radio Shack/TRS-80 Model 4,trs-80,manual,2843
+TOSEC,Bally/Professional Arcade & Astrocade,astrocde,manual,2831
 FinalBurn Neo,nes,arcade,collection,2816
 Laserdisc Collection,Hypseus Singe [Daphne],,unmapped,2800
-Redump,Microsoft - Xbox,,unmapped,2780
-TOSEC,"Commodore/C16, C116 & Plus-4",,unmapped,2761
+Redump,Microsoft - Xbox,xbox,manual,2780
+TOSEC,"Commodore/C16, C116 & Plus-4",plus4,manual,2761
 Internet Archive,mdashk,,none,2726
 TOSEC,Nintendo/Game Boy Color,gbc,auto,2714
 No-Intro,Sony - PlayStation 3 (PSN) (Avatars),ps3,auto,2687
@@ -114,13 +114,13 @@ Redump,Philips - CD-i,cdimono1,auto,2465
 FinalBurn Neo,snes,arcade,collection,2436
 No-Intro,Nintendo - Game Boy Color,gbc,auto,2354
 No-Intro,Nintendo - Game Boy,gb,auto,2313
-TOSEC,Tandy Radio Shack/TRS-80 Model III,,unmapped,2277
+TOSEC,Tandy Radio Shack/TRS-80 Model III,trs-80,manual,2277
 TOSEC-ISO,Sega/Dreamcast,dreamcast,auto,2200
 No-Intro,Nintendo - Nintendo 3DS (Encrypted),n3ds,auto,2186
 No-Intro,Nintendo - Nintendo 3DS (Decrypted),n3ds,auto,2186
 No-Intro,Panic - Playdate (itch.io),,unmapped,2160
 No-Intro,Unofficial - Nintendo - Nintendo 3DS (Digital) (Updates and DLC) (Encrypted),,unmapped,2146
-Redump,Nintendo - GameCube - NKit RVZ [zstd-19-128k],,unmapped,2108
+Redump,Nintendo - GameCube - NKit RVZ [zstd-19-128k],gc,manual,2108
 TOSEC,Enterprise/64 & 128,,unmapped,2105
 No-Intro,Unofficial - Sony - PlayStation Portable (PSN) (Decrypted),psp,auto,2074
 bitsavers,pdp-11.trailing-edge.com,,none,2020
@@ -131,7 +131,7 @@ Laserdisc Collection,Various - Video - Archived,,unmapped,1885
 TOSEC-ISO,IBM/PC Compatibles,pc,alias,1881
 RetroAchievements,RA - Super Nintendo Entertainment System,,unmapped,1876
 bitsavers,communications,,none,1797
-TOSEC,Texas Instruments/TI-99 4A,,unmapped,1796
+TOSEC,Texas Instruments/TI-99 4A,ti99,manual,1796
 No-Intro,IBM - PC and Compatibles (Digital) (Groupees),,unmapped,1787
 No-Intro,Ouya - Ouya,,unmapped,1782
 TOSEC,Texas Instruments/TI-82,,unmapped,1779
@@ -149,16 +149,16 @@ Redump,Sega - Dreamcast,dreamcast,auto,1584
 Redump,IBM - PC compatible - SBI Subchannels,,unmapped,1565
 No-Intro,Sony - PlayStation 3 (PSN) (Themes),ps3,auto,1532
 TOSEC,Sinclair/ZX81,zx81,auto,1506
-Redump,Sega - Dreamcast - GDI Files,,unmapped,1488
+Redump,Sega - Dreamcast - GDI Files,dreamcast,manual,1488
 No-Intro,Sony - PlayStation (PS one Classics) (PSN),psx,auto,1477
 No-Intro,Project EGG,,unmapped,1469
-TOSEC,Sega/Mark III & Master System,,unmapped,1463
+TOSEC,Sega/Mark III & Master System,mastersystem,manual,1463
 Eggman's Arcade Repository,!Support Files,arcade,collection,1439
 Internet Archive,lollo_220,,none,1431
 No-Intro,Unofficial - Microsoft - Xbox 360 (Title Updates),,unmapped,1409
 Redump,Apple - Macintosh,macintosh,auto,1393
 TOSEC,Casio/CFX-9850,,unmapped,1391
-TOSEC,Tangerine/Oric-1 & Oric Atmos,,unmapped,1380
+TOSEC,Tangerine/Oric-1 & Oric Atmos,oric,manual,1380
 TOSEC,MGT/Sam Coupe,,unmapped,1351
 TOSEC,Commodore/C128,,unmapped,1316
 TOSEC,Nintendo/Game Boy Advance,gba,auto,1275
@@ -172,7 +172,7 @@ TOSEC-PIX,Apple/Macintosh,macintosh,auto,1226
 RetroAchievements,RA - Nintendo Game Boy Advance,gba,auto,1206
 No-Intro,Nintendo - Nintendo 64 (BigEndian),n64,auto,1193
 No-Intro,Nintendo - Nintendo 64 (ByteSwapped),n64,auto,1186
-No-Intro,Sega - Master System - Mark III,,unmapped,1177
+No-Intro,Sega - Master System - Mark III,mastersystem,manual,1177
 TOSEC-PIX,Commodore/C64,c64,alias,1171
 No-Intro,Sony - PlayStation Mobile (PSN),,unmapped,1169
 No-Intro,Nintendo - amiibo,,unmapped,1162
@@ -209,7 +209,7 @@ RetroAchievements,RA - Nintendo DS,nds,auto,832
 FinalBurn Neo,sms,arcade,collection,830
 No-Intro,Nintendo - Nintendo Entertainment System (Headerless) (Private),nes,auto,820
 TOSEC-PIX,Nintendo/Magazines,,unmapped,812
-No-Intro,Sega - Mega Drive - Genesis (Aftermarket),,unmapped,803
+No-Intro,Sega - Mega Drive - Genesis (Aftermarket),genesis,manual,803
 TOSEC-ISO,Sony/PlayStation Portable,psp,auto,786
 TOSEC,Dragon Data/Dragon,,unmapped,780
 RetroAchievements,RA - Arcade,arcade,auto,753
@@ -279,7 +279,7 @@ Internet Archive,xabem42551_luravell_com,,none,517
 TOSEC,Tandy Radio Shack/TRS-80 Color Computer,,unmapped,514
 Hardware Target Game Database,SegaCD,segacd,auto,499
 TOSEC,Acorn/Archimedes,archimedes,auto,495
-No-Intro,Sega - Master System - Mark III (Aftermarket),,unmapped,493
+No-Intro,Sega - Master System - Mark III (Aftermarket),mastersystem,manual,493
 TOSEC-ISO,Sony/PlayStation 2,ps2,auto,474
 eXo,eXoAppleIIGS,,unmapped,470
 No-Intro,Apple - II (A2R),apple2,auto,467
@@ -367,7 +367,7 @@ TOSEC-PIX,Apple/Magazines,,unmapped,259
 TOSEC-ISO,Sony/PlayStation,psx,auto,259
 No-Intro,Bandai - WonderSwan,wonderswan,auto,258
 Miscellaneous,LittleBigPlanet 1-3 Online Levels Archive,,none,258
-TOSEC,Sega/Game 1000,,unmapped,258
+TOSEC,Sega/Game 1000,sg-1000,manual,258
 Redump,Photo CD,,unmapped,257
 TOSEC-PIX,Amstrad/Magazines,,unmapped,254
 No-Intro,Bandai - WonderSwan Color,wonderswancolor,auto,254
@@ -375,7 +375,7 @@ TOSEC,Atari/7800,atari7800,auto,252
 Internet Archive,96x65pixels,,none,248
 No-Intro,Sega - SG-1000,sg-1000,auto,247
 No-Intro,IBM - PC and Compatibles (Digital) (DLsite),,unmapped,246
-No-Intro,Sega - Mega Drive - Genesis (Private),,unmapped,245
+No-Intro,Sega - Mega Drive - Genesis (Private),genesis,manual,245
 Redump,Sony - PlayStation 2 - BIOS Images,,unmapped,245
 No-Intro,Apple - IIGS (A2R),apple2gs,auto,244
 No-Intro,Sega - SG-1000 - SC-3000,,unmapped,242

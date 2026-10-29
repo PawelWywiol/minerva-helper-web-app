@@ -177,3 +177,6 @@ x68000,Sharp X68000,computer,other
 zmachine,Infocom Z-machine,computer,other
 zx81,Sinclair ZX81,computer,sinclair
 zxspectrum,Sinclair ZX Spectrum,computer,sinclair
+trs-80,Tandy TRS-80,computer,other
+xbox,Microsoft Xbox,gamepad_modern,microsoft
+xbox360,Microsoft Xbox 360,gamepad_modern,microsoft
