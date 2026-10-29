@@ -1,13 +1,10 @@
 package io.github.pawelwywiol.minervaweb.download
 
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import org.libtorrent4j.AlertListener
 import org.libtorrent4j.Priority
 import org.libtorrent4j.SessionManager
 import org.libtorrent4j.SessionParams
@@ -15,9 +12,6 @@ import org.libtorrent4j.SettingsPack
 import org.libtorrent4j.TcpEndpoint
 import org.libtorrent4j.TorrentHandle
 import org.libtorrent4j.TorrentInfo
-import org.libtorrent4j.alerts.Alert
-import org.libtorrent4j.alerts.AlertType
-import org.libtorrent4j.alerts.CacheFlushedAlert
 import org.libtorrent4j.swig.add_torrent_params
 import org.libtorrent4j.swig.error_code
 import org.libtorrent4j.swig.load_torrent_limits
@@ -27,10 +21,13 @@ import org.libtorrent4j.swig.torrent_info
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+import kotlin.io.path.fileSize
+import kotlin.io.path.isRegularFile
 
 private const val STALL_LIMIT_SECONDS = 300
 private const val TICK_MS = 1000L
-private const val FLUSH_TIMEOUT_MS = 60_000L
+private const val RECHECK_AFTER_TICKS = 5
+private const val MAX_RECHECKS = 2
 private const val MAX_TORRENT_BUFFER = 256 * 1024 * 1024
 private const val MAX_DECODE_TOKENS = 50_000_000
 private const val MD5_BUFFER = 64 * 1024
@@ -69,11 +66,16 @@ class SelectiveDownloader(
         val peers: Int,
     )
 
-    // wantedNow is re-read every tick, so pausing one file takes effect within a second; empty cancels
+    /**
+     * wantedNow is re-read every tick, so pausing one file takes effect within a second; empty cancels.
+     * Returns only once every wanted file is intact on disk: a verified piece can still be waiting in
+     * another disk thread when the torrent finishes, and removing the torrent then loses that write.
+     */
     suspend fun download(
         torrent: Path,
         targetDir: Path,
         wantedNow: () -> Set<Int>,
+        intact: ((index: Int, file: Path) -> Boolean)? = null,
         onProgress: suspend (Progress) -> Unit,
     ): Result =
         withContext(Dispatchers.IO) {
@@ -81,12 +83,16 @@ class SelectiveDownloader(
             var wanted = info.validate(wantedNow())
             require(wanted.isNotEmpty()) { "no valid file indexes for ${torrent.fileName}" }
 
+            val isIntact =
+                intact ?: { index, file -> file.isRegularFile() && file.fileSize() == info.files().fileSize(index) }
             Files.createDirectories(targetDir)
             session.download(info, targetDir.toFile(), null, info.priorities(wanted), peers, torrent_flags_t())
             val handle = checkNotNull(session.find(info.infoHash())) { "no torrent handle" }
             try {
                 var total = wanted.sumOf { info.files().fileSize(it) }
                 var stalledFor = 0
+                var unverifiedFor = 0
+                var rechecks = 0
                 var lastDone = -1L
                 val result: Result
                 while (true) {
@@ -96,8 +102,19 @@ class SelectiveDownloader(
                     val verified = handle.fileProgress(TorrentHandle.PIECE_GRANULARITY)
                     val done = wanted.sumOf { verified[it] }
                     if (done >= total) {
-                        result = Result(status.totalPayloadUpload(), status.totalUpload())
-                        break
+                        // after rechecks the bytes are the torrent's own; a remaining mismatch is the caller's to report
+                        if (rechecks >= MAX_RECHECKS ||
+                            wanted.all { isIntact(it, targetDir.resolve(info.files().filePath(it))) }
+                        ) {
+                            result = Result(status.totalPayloadUpload(), status.totalUpload())
+                            break
+                        }
+                        // still not on disk after a while: let libtorrent re-read and fetch what is missing
+                        if (++unverifiedFor >= RECHECK_AFTER_TICKS) {
+                            handle.forceRecheck()
+                            unverifiedFor = 0
+                            rechecks++
+                        }
                     }
                     val requested = info.validate(wantedNow())
                     if (requested != wanted) {
@@ -110,37 +127,15 @@ class SelectiveDownloader(
                     stalledFor = if (done == lastDone) stalledFor + 1 else 0
                     lastDone = done
                     if (stalledFor >= STALL_LIMIT_SECONDS) throw Stalled(status.numPeers())
-                    onProgress(Progress(done, total, status.downloadRate(), status.numPeers()))
+                    onProgress(Progress(minOf(done, total), total, status.downloadRate(), status.numPeers()))
                     delay(TICK_MS)
                 }
-                flush(handle)
                 onProgress(Progress(total, total, 0, 0))
                 result
             } finally {
                 session.remove(handle)
             }
         }
-
-    // verified pieces can still sit in libtorrent's write buffer; reading the file before this sees stale bytes
-    private suspend fun flush(handle: TorrentHandle) {
-        val hash = handle.infoHash()
-        val flushed = CompletableDeferred<Unit>()
-        val listener =
-            object : AlertListener {
-                override fun types() = intArrayOf(AlertType.CACHE_FLUSHED.swig())
-
-                override fun alert(alert: Alert<*>) {
-                    if ((alert as CacheFlushedAlert).handle().infoHash() == hash) flushed.complete(Unit)
-                }
-            }
-        session.addListener(listener)
-        try {
-            handle.flushCache()
-            withTimeout(FLUSH_TIMEOUT_MS) { flushed.await() }
-        } finally {
-            session.removeListener(listener)
-        }
-    }
 
     override fun close() {
         session.stop()
@@ -182,8 +177,12 @@ fun loadTorrentInfo(torrent: Path): TorrentInfo {
     return TorrentInfo(torrent_info(params.ti_ptr()))
 }
 
-fun Path.md5(): String {
-    val digest = MessageDigest.getInstance("MD5")
+fun Path.md5(): String = digest("MD5")
+
+fun Path.sha1(): String = digest("SHA-1")
+
+private fun Path.digest(algorithm: String): String {
+    val digest = MessageDigest.getInstance(algorithm)
     Files.newInputStream(this).use { input ->
         val buffer = ByteArray(MD5_BUFFER)
         while (true) {
