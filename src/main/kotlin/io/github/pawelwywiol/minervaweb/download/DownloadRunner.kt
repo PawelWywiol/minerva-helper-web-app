@@ -186,8 +186,17 @@ class DownloadRunner(
         file: Path,
     ) {
         queue.setState(item.id, DownloadState.VERIFYING)
-        val ok = file.isRegularFile() && file.fileSize() == item.size && (item.md5 == null || item.md5 == file.md5())
-        if (!ok) {
+        val size = if (file.isRegularFile()) file.fileSize() else -1
+        val md5 = if (size == item.size && item.md5 != null) file.md5() else null
+        if (size != item.size || md5 != item.md5) {
+            log.warn(
+                "verification failed for {}: size {} of {}, md5 {} expected {}",
+                file,
+                size,
+                item.size,
+                md5,
+                item.md5,
+            )
             // a damaged file is deleted, left in staging it would look finished on the next run
             file.deleteIfExists()
             queue.setState(item.id, DownloadState.FAILED, "The downloaded file was damaged — remove it and try again")
