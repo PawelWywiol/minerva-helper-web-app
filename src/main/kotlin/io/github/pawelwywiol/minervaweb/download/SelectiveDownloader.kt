@@ -1,10 +1,13 @@
 package io.github.pawelwywiol.minervaweb.download
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import org.libtorrent4j.AlertListener
 import org.libtorrent4j.Priority
 import org.libtorrent4j.SessionManager
 import org.libtorrent4j.SessionParams
@@ -12,6 +15,9 @@ import org.libtorrent4j.SettingsPack
 import org.libtorrent4j.TcpEndpoint
 import org.libtorrent4j.TorrentHandle
 import org.libtorrent4j.TorrentInfo
+import org.libtorrent4j.alerts.Alert
+import org.libtorrent4j.alerts.AlertType
+import org.libtorrent4j.alerts.CacheFlushedAlert
 import org.libtorrent4j.swig.add_torrent_params
 import org.libtorrent4j.swig.error_code
 import org.libtorrent4j.swig.load_torrent_limits
@@ -24,6 +30,7 @@ import java.security.MessageDigest
 
 private const val STALL_LIMIT_SECONDS = 300
 private const val TICK_MS = 1000L
+private const val FLUSH_TIMEOUT_MS = 60_000L
 private const val MAX_TORRENT_BUFFER = 256 * 1024 * 1024
 private const val MAX_DECODE_TOKENS = 50_000_000
 private const val MD5_BUFFER = 64 * 1024
@@ -106,12 +113,34 @@ class SelectiveDownloader(
                     onProgress(Progress(done, total, status.downloadRate(), status.numPeers()))
                     delay(TICK_MS)
                 }
+                flush(handle)
                 onProgress(Progress(total, total, 0, 0))
                 result
             } finally {
                 session.remove(handle)
             }
         }
+
+    // verified pieces can still sit in libtorrent's write buffer; reading the file before this sees stale bytes
+    private suspend fun flush(handle: TorrentHandle) {
+        val hash = handle.infoHash()
+        val flushed = CompletableDeferred<Unit>()
+        val listener =
+            object : AlertListener {
+                override fun types() = intArrayOf(AlertType.CACHE_FLUSHED.swig())
+
+                override fun alert(alert: Alert<*>) {
+                    if ((alert as CacheFlushedAlert).handle().infoHash() == hash) flushed.complete(Unit)
+                }
+            }
+        session.addListener(listener)
+        try {
+            handle.flushCache()
+            withTimeout(FLUSH_TIMEOUT_MS) { flushed.await() }
+        } finally {
+            session.removeListener(listener)
+        }
+    }
 
     override fun close() {
         session.stop()
