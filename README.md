@@ -2,7 +2,7 @@
 
 Browser-driven counterpart of [Minerva Helper](https://github.com/PawelWywiol/minervahelper) for Linux, shipped as a Docker image. It finds retro games in the public MiNERVA archive and downloads **only the files you pick**, verifies them and files them into an [ES-DE](https://es-de.org) style library.
 
-- search 2.4 million files by name, system or both (`nes mario`, `amiga cd32`), ranked by shared words in any order, or paste a whole list; browse by collection and platform, game details beside the list, favourites
+- search 2.4 million files by name, system or both (`nes mario`, `amiga cd32`), ranked by shared words in any order, or paste a whole list; filter by release region; versions of games you already have are flagged; browse by collection and platform, game details beside the list, favourites
 - check from Settings that downloads leave through the VPN (needs gluetun's `GET /v1/vpn/status` and `GET /v1/publicip/ip` routes, see `VPN_CONTROL_URL`)
 - download queue: order by torrent, pause whole torrents, retry failed ones
 - only the picked file is fetched out of a torrent; nothing is ever uploaded (no incoming connections, no unchoking, torrents removed after each download, zero uploaded bytes checked)

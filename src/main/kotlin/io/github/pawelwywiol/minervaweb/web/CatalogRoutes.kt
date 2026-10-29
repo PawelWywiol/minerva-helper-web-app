@@ -2,6 +2,8 @@ package io.github.pawelwywiol.minervaweb.web
 
 import io.github.pawelwywiol.minervaweb.catalog.CatalogReader
 import io.github.pawelwywiol.minervaweb.catalog.CatalogService
+import io.github.pawelwywiol.minervaweb.catalog.Regions
+import io.github.pawelwywiol.minervaweb.catalog.titleOf
 import io.github.pawelwywiol.minervaweb.platform.SystemMatcher
 import io.github.pawelwywiol.minervaweb.queue.DownloadQueue
 import io.ktor.http.ContentType
@@ -36,18 +38,35 @@ internal class RomView(
     private val downloaded = s.queue.downloadedKeys()
     private val favourites = s.queue.favourites().toSet()
 
+    // another version of the same game in the same folder: a USA release next to a Japanese one already kept
+    private val similar: Map<String, String> =
+        s.queue.all().associate {
+            similarKey(
+                s.settings.folderFor(it.collection, it.platformKey),
+                it.name,
+            ) to "queue"
+        } +
+            s.queue.downloaded().associate { similarKey(it.folder, it.name) to "library" }
+
+    private fun similarKey(
+        folder: String,
+        name: String,
+    ) = "$folder/${titleOf(name)}"
+
     fun put(
         target: JsonObjectBuilder,
         rom: CatalogReader.Rom,
     ) {
         val key = DownloadQueue.key(rom.torrentPath, rom.soId)
         val slug = s.settings.slugFor(rom.collection, rom.platformKey)
-        target.put("folder", s.settings.folderFor(rom.collection, rom.platformKey))
+        val folder = s.settings.folderFor(rom.collection, rom.platformKey)
+        target.put("folder", folder)
         target.put("platform", s.systems.labelFor(rom.platformKey, slug))
         target.put("family", s.systems.familyFor(slug))
         target.put("queued", key in queued)
         target.put("downloaded", key in downloaded)
         target.put("favourite", Triple(rom.collection, rom.platformKey, rom.name) in favourites)
+        target.put("similar", similar[similarKey(folder, rom.name)])
     }
 }
 
@@ -147,6 +166,7 @@ fun Route.catalogRoutes(s: Services) {
                 ?.toIntOrNull()
                 ?.coerceAtLeast(0) ?: 0
         val anywhere = call.request.queryParameters["anywhere"] == "true"
+        val hidden = Regions.parse(call.request.queryParameters["hide"])
         call.withCatalog(catalog) { reader ->
             val parsed = matcher.parse(reader.platforms(), query, anywhere)
             val system = parsed.system
@@ -154,9 +174,9 @@ fun Route.catalogRoutes(s: Services) {
             val prefix = query.lastOrNull()?.isLetterOrDigit() == true
             val roms =
                 if (system != null && parsed.terms.isEmpty()) {
-                    reader.list(system.platformIds, limit, offset)
+                    reader.list(system.platformIds, limit, offset, hidden)
                 } else {
-                    reader.rank(parsed.terms, prefix, system?.platformIds, limit, offset)
+                    reader.rank(parsed.terms, prefix, system?.platformIds, limit, offset, hidden)
                 }
             buildJsonObject {
                 putRoms(roms, limit, RomView(s))

@@ -33,12 +33,13 @@ class CatalogRoutesTest {
 
     private fun app(
         withCatalog: Boolean = true,
-        block: suspend ApplicationTestBuilder.() -> Unit,
+        extra: List<List<Any?>> = emptyList(),
+        block: suspend ApplicationTestBuilder.(Services) -> Unit,
     ) = testApplication {
-        if (withCatalog) TestCatalog.catalog(dir)
+        if (withCatalog) TestCatalog.catalog(dir, extra)
         val services = testServices(dir)
         application { module(emptySet(), services) }
-        block()
+        block(services)
     }
 
     private suspend fun ApplicationTestBuilder.get(path: String) =
@@ -108,6 +109,43 @@ class CatalogRoutesTest {
             assertEquals(JsonNull, result["system"])
             val folders = result["systems"]!!.jsonArray.map { it.jsonObject["folder"]?.jsonPrimitive?.content }
             assertEquals(listOf("amigacd32"), folders)
+        }
+
+    @Test
+    fun `another version of a game already kept is marked as similar`() =
+        app(
+            extra = listOf(listOf("./No-Intro/${TestCatalog.NES}/Zelda (Japan).zip", "No-Intro/nes.torrent", 40, null)),
+        ) { services ->
+            val usa =
+                services.catalog
+                    .read {
+                        listOfNotNull(
+                            it.rom("No-Intro", TestCatalog.NES, "Zelda (USA).zip"),
+                        )
+                    }!!
+                    .single()
+            services.queue.recordDownloaded(usa, "nes")
+            val rows =
+                json("/api/search?q=nes+zelda")["roms"]!!.jsonArray.associateBy {
+                    it.jsonObject["name"]!!.jsonPrimitive.content
+                }
+            assertEquals(
+                "library",
+                rows
+                    .getValue("Zelda (Japan).zip")
+                    .jsonObject["similar"]
+                    ?.jsonPrimitive
+                    ?.content,
+            )
+            assertEquals(
+                "true",
+                rows
+                    .getValue("Zelda (USA).zip")
+                    .jsonObject["downloaded"]
+                    ?.jsonPrimitive
+                    ?.content,
+            )
+            assertEquals(JsonNull, json("/api/search?q=mario")["roms"]!!.jsonArray.single().jsonObject["similar"])
         }
 
     @Test

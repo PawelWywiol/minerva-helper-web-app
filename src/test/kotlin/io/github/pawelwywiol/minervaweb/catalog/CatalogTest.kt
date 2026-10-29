@@ -55,6 +55,33 @@ class CatalogTest {
     }
 
     @Test
+    fun `hidden regions are left out of rankings and listings alike`() {
+        val nes = "./No-Intro/${TestCatalog.NES}"
+        val extra =
+            listOf("Zelda (Japan).zip", "Zelda (Europe).zip").mapIndexed { i, name ->
+                listOf<Any?>(
+                    "$nes/$name",
+                    "No-Intro/nes.torrent",
+                    30 + i,
+                    null,
+                )
+            }
+        CatalogReader(TestCatalog.catalog(dir, extra)).use { catalog ->
+            val nesId = catalog.platforms("No-Intro").single().id
+            val noJapan = setOf("japan")
+            assertEquals(
+                listOf("Zelda (Europe).zip", "Zelda (USA).zip"),
+                catalog.rank(listOf("zelda"), false, listOf(nesId), hiddenRegions = noJapan).map { it.name },
+            )
+            assertEquals(
+                listOf("Super Mario Bros. (World).zip", "Zelda (Europe).zip", "Zelda (USA).zip"),
+                catalog.list(listOf(nesId), hiddenRegions = noJapan).map { it.name },
+            )
+            assertEquals(emptyList(), catalog.list(listOf(nesId), hiddenRegions = Regions.KEYS))
+        }
+    }
+
+    @Test
     fun `rom keeps torrent position and hashes`() =
         reader().use { catalog ->
             val rom = catalog.find("mario").single()

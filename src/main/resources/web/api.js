@@ -37,8 +37,12 @@ export function roms(platformId, cursor) {
   return get(`/api/platforms/${platformId}/roms${query}`);
 }
 
-export const search = (query, offset = 0, anywhere = false, limit = 50) =>
-  get(`/api/search?q=${encodeURIComponent(query)}&offset=${offset}&limit=${limit}${anywhere ? '&anywhere=true' : ''}`);
+export function search(query, { offset = 0, limit = 50, anywhere = false, hide = [] } = {}) {
+  const params = new URLSearchParams({ q: query, offset, limit });
+  if (anywhere) params.set('anywhere', 'true');
+  if (hide.length > 0) params.set('hide', hide.join(','));
+  return get(`/api/search?${params}`);
+}
 
 export const vpn = () => get('/api/vpn');
 

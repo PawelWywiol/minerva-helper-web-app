@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { badge, el, icon, size, splitName } from '../dom.js';
+import { badge, el, icon, similarNote, size, splitName } from '../dom.js';
 
 /**
  * One game in full beside the list it was picked from: cover, where it lands, checksums. On a
@@ -74,6 +74,9 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
         el('div', {}, [el('strong', {}, `roms/${rom.folder}`), el('span', {}, `${rom.platform} in ES-DE`)]),
       ]),
       rom.downloaded && !rom.queued ? el('p', { className: 'ok' }, [icon('check'), 'Already in your library']) : null,
+      similarNote(rom)
+        ? el('p', { className: 'similar' }, `${similarNote(rom)}: check before downloading this one too.`)
+        : null,
       el('div', { className: 'actions' }, [get, fav]),
       el('dl', { className: 'facts' }, [
         ...fact('Size', size(rom.size)),

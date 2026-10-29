@@ -6,7 +6,33 @@ import { games } from './games.js';
 const DEBOUNCE_MS = 200;
 const EXAMPLES = ['nes mario', 'amiga cd32', 'psx final fantasy', 'genesis sonic', 'arcade'];
 const MAX_LINES = 300;
-const PER_LINE = 5;
+const PER_LINE = 3;
+const MORE_VERSIONS = 5;
+const REGIONS = [
+  ['usa', 'USA'],
+  ['europe', 'Europe'],
+  ['world', 'World'],
+  ['japan', 'Japan'],
+  ['other', 'Other regions'],
+];
+const REGIONS_KEY = 'minerva.hiddenRegions';
+
+// a per-browser preference, like the scrolling choice
+function loadHidden() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(REGIONS_KEY) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveHidden(hidden) {
+  try {
+    localStorage.setItem(REGIONS_KEY, JSON.stringify([...hidden]));
+  } catch {
+    // private windows may refuse storage; the filter still works for this visit
+  }
+}
 const PARALLEL = 4;
 
 /**
@@ -58,6 +84,32 @@ export function search(mount, { onError, setQuery }) {
   ]);
   listBox.hidden = true;
 
+  const hidden = loadHidden();
+  const regionChips = el('div', { className: 'chips regions', role: 'group', ariaLabel: 'Release regions to show' });
+  function paintRegions() {
+    regionChips.replaceChildren(
+      el('span', { className: 'muted' }, 'Show'),
+      ...REGIONS.map(([key, label]) => {
+        const chip = button(
+          [hidden.has(key) ? null : icon('check'), label],
+          () => {
+            if (hidden.has(key)) hidden.delete(key);
+            else hidden.add(key);
+            saveHidden(hidden);
+            paintRegions();
+            if (!listBox.hidden) runList();
+            else if (query) run(false);
+          },
+          'chip region',
+        );
+        chip.setAttribute('aria-pressed', String(!hidden.has(key)));
+        return chip;
+      }),
+    );
+  }
+  paintRegions();
+  const hide = () => [...hidden];
+
   let query = '';
   let anywhere = false;
   let offset = 0;
@@ -98,7 +150,7 @@ export function search(mount, { onError, setQuery }) {
       await acquire();
       try {
         // a newer search makes the rest of this list moot
-        return mine === generation ? await api.search(line, 0, false, PER_LINE) : null;
+        return mine === generation ? await api.search(line, { limit: PER_LINE, hide: hide() }) : null;
       } catch {
         return null;
       } finally {
@@ -112,7 +164,20 @@ export function search(mount, { onError, setQuery }) {
       if (mine !== generation) return;
       const roms = result ? withMatch(result) : [];
       if (roms.length > 0) found++;
-      list.appendGroup(wanted[index], roms, result?.system);
+      const where = result?.system ? ` in roms/${result.system.folder}` : '';
+      let shown = roms.length;
+      const line = wanted[index];
+      const moreVersions = async () => {
+        const next = await api.search(line, { offset: shown, limit: MORE_VERSIONS, hide: hide() });
+        shown += next.roms.length;
+        return { roms: withMatch(next), more: next.more };
+      };
+      list.appendGroup(
+        line,
+        roms.length > 0 ? `best matches${where}` : 'no match',
+        roms,
+        result?.more ? moreVersions : null,
+      );
     }
     const missing = wanted.length - found;
     status.textContent = `${count(found)} of ${count(wanted.length)} found${missing ? `, ${count(missing)} without a match` : ''}`;
@@ -143,7 +208,7 @@ export function search(mount, { onError, setQuery }) {
     if (!append) offset = 0;
     more.disabled = true;
     try {
-      const result = await api.search(query, offset, anywhere);
+      const result = await api.search(query, { offset, anywhere, hide: hide() });
       if (mine !== generation) return;
       offset += result.roms.length;
       if (append) list.append(withMatch(result));
@@ -180,7 +245,7 @@ export function search(mount, { onError, setQuery }) {
   const view = {
     // Same nodes every time, so coming back keeps the query, its results and the game picked.
     open() {
-      mount.replaceChildren(heading, listBox, status, systems, hint, list.node, more);
+      mount.replaceChildren(heading, listBox, regionChips, status, systems, hint, list.node, more);
       hint.hidden = Boolean(query) || !listBox.hidden;
       if (!query && listBox.hidden) paintEmpty();
     },
