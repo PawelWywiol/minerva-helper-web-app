@@ -188,6 +188,36 @@ fun Route.catalogRoutes(s: Services) {
         }
     }
 
+    // other files of the same game for the same folder: other regions, revisions, re-releases
+    get("/api/roms/{id}/versions") {
+        val limit = call.pageSize()
+        val offset =
+            call.request.queryParameters["offset"]
+                ?.toIntOrNull()
+                ?.coerceAtLeast(0) ?: 0
+        val hidden = Regions.parse(call.request.queryParameters["hide"])
+        call.withRom(catalog) { rom ->
+            val folder = settings.folderFor(rom.collection, rom.platformKey)
+            val title = titleOf(rom.name)
+            val versions =
+                catalog.read { reader ->
+                    val platformIds =
+                        reader.platforms().filter { settings.folderFor(it.collection, it.key) == folder }.map { it.id }
+                    reader.rank(
+                        title.split(' ').filter { it.isNotEmpty() },
+                        false,
+                        platformIds,
+                        limit,
+                        offset,
+                        hidden,
+                    ) {
+                        it.id != rom.id && titleOf(it.name) == title
+                    }
+                }
+            if (versions == null) call.noCatalog() else call.json(romsJson(versions, limit, RomView(s)))
+        }
+    }
+
     get("/api/roms/{id}") {
         call.withRom(catalog) { rom ->
             val info = s.gameInfo.lookup(rom, settings.slugFor(rom.collection, rom.platformKey))

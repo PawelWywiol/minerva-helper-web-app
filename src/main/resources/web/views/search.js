@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { badge, button, count, el, icon, loadOnScroll } from '../dom.js';
+import { badge, button, count, el, icon, loadHidden, loadOnScroll, saveHidden } from '../dom.js';
 import { games } from './games.js';
 
 /** Long enough that a two-letter prefix does not sweep the whole 2.4M-row index on every keystroke. */
@@ -15,24 +15,6 @@ const REGIONS = [
   ['japan', 'Japan'],
   ['other', 'Other regions'],
 ];
-const REGIONS_KEY = 'minerva.hiddenRegions';
-
-// a per-browser preference, like the scrolling choice
-function loadHidden() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(REGIONS_KEY) || '[]'));
-  } catch {
-    return new Set();
-  }
-}
-
-function saveHidden(hidden) {
-  try {
-    localStorage.setItem(REGIONS_KEY, JSON.stringify([...hidden]));
-  } catch {
-    // private windows may refuse storage; the filter still works for this visit
-  }
-}
 const PARALLEL = 4;
 
 /**

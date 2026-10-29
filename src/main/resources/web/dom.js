@@ -75,6 +75,15 @@ export function highlight(text, match) {
   });
 }
 
+export function getState(rom) {
+  if (rom.queued) return { icon: 'clock', label: 'Queued', hint: 'Remove from the queue' };
+  if (rom.downloaded) return { icon: 'check', label: 'In library', hint: 'Already in your library' };
+  return { icon: 'download', label: 'Download', hint: `Download to roms/${rom.folder}` };
+}
+
+/** Sets of one system differ by a suffix, "Nintendo - NES (Headered)" against "(Headerless)". */
+export const variant = (rom) => rom.platformKey?.match(/\(([^)]+)\)$/)?.[1] ?? '';
+
 /** Another version of the same game, in the same folder, is already kept or on its way. */
 export function similarNote(rom) {
   if (rom.downloaded || rom.queued || !rom.similar) return '';
@@ -140,6 +149,25 @@ export function loadOnScroll(node) {
     { rootMargin: '600px 0px' },
   );
   observer.observe(node);
+}
+
+const REGIONS_KEY = 'minerva.hiddenRegions';
+
+// a per-browser preference, like the scrolling choice
+export function loadHidden() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(REGIONS_KEY) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveHidden(hidden) {
+  try {
+    localStorage.setItem(REGIONS_KEY, JSON.stringify([...hidden]));
+  } catch {
+    // private windows may refuse storage; the filter still works for this visit
+  }
 }
 
 let toastTimer = null;

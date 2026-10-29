@@ -48,6 +48,12 @@ export const vpn = () => get('/api/vpn');
 
 export const rom = (id) => get(`/api/roms/${id}`);
 
+export function versions(id, { offset = 0, limit = 3, hide = [] } = {}) {
+  const params = new URLSearchParams({ offset, limit });
+  if (hide.length > 0) params.set('hide', hide.join(','));
+  return get(`/api/roms/${id}/versions?${params}`);
+}
+
 export const favourites = () => get('/api/favourites');
 
 export const toggleFavourite = (romId) => send('/api/favourites', { romId });

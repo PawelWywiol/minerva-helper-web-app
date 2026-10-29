@@ -121,6 +121,7 @@ class CatalogReader(
         limit: Int = DEFAULT_PAGE,
         offset: Int = 0,
         hiddenRegions: Set<String> = emptySet(),
+        keep: (Rom) -> Boolean = { true },
     ): List<Rom> {
         if (terms.isEmpty()) return emptyList()
         val match = WordMatch(terms, prefix)
@@ -132,7 +133,7 @@ class CatalogReader(
             listOf(expression),
             MAX_CANDIDATES,
         ).map { it to match.score(it) }
-            .filter { it.second.shared > 0 && Regions.visible(it.first.name, hiddenRegions) }
+            .filter { it.second.shared > 0 && Regions.visible(it.first.name, hiddenRegions) && keep(it.first) }
             .sortedWith(WordMatch.ORDER)
             .drop(offset)
             .take(limit)
