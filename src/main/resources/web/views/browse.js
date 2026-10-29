@@ -1,122 +1,106 @@
 import * as api from '../api.js';
-import { count, el, romRow, row, size, spinner } from '../dom.js';
+import { badge, button, count, el, spinner } from '../dom.js';
+import { games } from './games.js';
 
 /**
- * Collections → platforms → ROMs, the same three levels as the app.
+ * Collections → platforms → games, the archive's own three levels.
  *
- * The ROM list keeps a window rather than everything: the largest platform holds 753k entries, and a
- * page that grows without limit eventually stops scrolling. Rows above the window are dropped and
- * reloaded on the way back up.
+ * The game list keeps a window rather than everything: the largest platform holds 753k entries, and
+ * a page that grows without limit eventually stops scrolling.
  */
 const MAX_ROWS = 1000;
 
-export function browse(mount, { onError, onDetails }) {
-  const render = (nodes) => mount.replaceChildren(...nodes);
+export function browse(mount, { onError }) {
+  const render = (...nodes) => mount.replaceChildren(...nodes);
 
   const crumbs = (...parts) =>
     el(
       'nav',
       { className: 'crumbs', ariaLabel: 'Where you are' },
-      parts
-        .flatMap((part, index) => [
-          index > 0 ? el('span', { className: 'sep', ariaHidden: 'true' }, '›') : null,
-          part.onClick
-            ? el('button', { type: 'button', className: 'link', onclick: part.onClick }, part.label)
-            : el('span', { className: 'here' }, part.label),
-        ])
-        .filter(Boolean),
+      parts.map((part) =>
+        part.onClick ? button(part.label, part.onClick, 'link') : el('span', { ariaCurrent: 'page' }, part.label),
+      ),
     );
 
+  const card = (onClick, children) => button(children, onClick, 'card');
+
   async function showCollections() {
-    render([spinner('Loading collections…')]);
+    render(spinner('Loading collections…'));
     try {
       const { collections } = await api.collections();
-      render([
+      render(
         el('h1', {}, 'Browse'),
-        el('p', { className: 'muted' }, `${collections.length} collections`),
+        el('p', { className: 'muted' }, 'Each collection is a different preservation group’s set of dumps.'),
         el(
           'div',
-          { className: 'list' },
+          { className: 'cards' },
           collections.map((c) =>
-            row(
+            card(
               () => showPlatforms(c.name),
               [
-                el('span', { className: 'name' }, c.name),
-                el('span', { className: 'meta' }, `${count(c.fileCount)} files · ${c.platformCount} platforms`),
+                el('strong', {}, c.name),
+                el('span', { className: 'muted' }, `${count(c.platformCount)} platforms`),
+                el('span', { className: 'n' }, `${count(c.fileCount)} files`),
               ],
             ),
           ),
         ),
-      ]);
+      );
     } catch (error) {
       onError(error, showCollections);
     }
   }
 
   async function showPlatforms(collection) {
-    render([spinner('Loading platforms…')]);
+    render(spinner('Loading platforms…'));
     try {
       const { platforms } = await api.platforms(collection);
-      render([
+      render(
         crumbs({ label: 'Browse', onClick: showCollections }, { label: collection }),
         el('h1', {}, collection),
         el(
           'div',
-          { className: 'list' },
+          { className: 'cards' },
           platforms.map((p) =>
-            row(
+            card(
               () => showRoms(collection, p),
               [
-                el('span', { className: 'name' }, p.label),
-                el('span', { className: 'meta' }, `${count(p.fileCount)} files · goes to ${p.folder}`),
+                badge(p.folder, p.family),
+                el('strong', {}, p.label),
+                p.label === p.key ? null : el('span', { className: 'muted' }, p.key),
+                el('span', { className: 'n' }, `${count(p.fileCount)} files`),
               ],
             ),
           ),
         ),
-      ]);
+      );
     } catch (error) {
       onError(error, () => showPlatforms(collection));
     }
   }
 
   async function showRoms(collection, platform) {
+    const list = games();
     const rows = [];
     let cursor = null;
     let more = true;
     let loading = false;
 
-    const list = el('div', { className: 'list' });
     const status = el('p', { className: 'muted' }, 'Loading…');
-    const moreButton = el('button', { type: 'button', className: 'ghost wide' }, 'Load more');
+    const moreButton = button('Show more', () => loadMore(), 'ghost wide');
+    moreButton.hidden = true;
 
-    // Returning from a detail pane re-mounts the very same nodes, so the page reached by loading
-    // more, and the scroll position with it, is still there.
-    const show = () =>
-      render([
-        crumbs(
-          { label: 'Browse', onClick: showCollections },
-          { label: collection, onClick: () => showPlatforms(collection) },
-          { label: platform.label },
-        ),
-        el('h1', {}, platform.label),
-        status,
-        list,
-        moreButton,
-      ]);
-
-    const paint = () => {
-      list.replaceChildren(
-        ...rows.map((rom) =>
-          romRow(rom, size(rom.size), {
-            queue: api.toggleQueue,
-            details: (it) => onDetails(it, show),
-            onError: (error) => onError(error, () => showRoms(collection, platform)),
-          }),
-        ),
-      );
-      status.textContent = `${count(rows.length)} of ${count(platform.fileCount)} shown`;
-      moreButton.hidden = !more;
-    };
+    render(
+      crumbs(
+        { label: 'Browse', onClick: showCollections },
+        { label: collection, onClick: () => showPlatforms(collection) },
+        { label: platform.label },
+      ),
+      el('h1', {}, platform.label),
+      status,
+      list.node,
+      moreButton,
+    );
 
     async function loadMore() {
       if (loading || !more) return;
@@ -125,10 +109,16 @@ export function browse(mount, { onError, onDetails }) {
       try {
         const page = await api.roms(platform.id, cursor);
         rows.push(...page.roms);
-        cursor = page.cursor;
+        cursor = page.last;
         more = page.more;
-        if (rows.length > MAX_ROWS) rows.splice(0, rows.length - MAX_ROWS);
-        paint();
+        if (rows.length > MAX_ROWS) {
+          rows.splice(0, rows.length - MAX_ROWS);
+          list.set(rows);
+        } else {
+          list.append(page.roms);
+        }
+        status.textContent = `${count(rows.length)} of ${count(platform.fileCount)} shown, landing in roms/${platform.folder}`;
+        moreButton.hidden = !more;
       } catch (error) {
         onError(error, () => showRoms(collection, platform));
       } finally {
@@ -137,10 +127,16 @@ export function browse(mount, { onError, onDetails }) {
       }
     }
 
-    moreButton.addEventListener('click', loadMore);
-    show();
     await loadMore();
   }
 
-  return { open: showCollections };
+  let opened = false;
+  return {
+    // Leaving and coming back keeps the level, page and game the user had reached.
+    open() {
+      if (opened) return;
+      opened = true;
+      showCollections();
+    },
+  };
 }

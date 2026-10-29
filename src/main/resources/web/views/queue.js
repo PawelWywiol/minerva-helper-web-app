@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { count, el, size } from '../dom.js';
+import { confirmable, count, el, size } from '../dom.js';
 
 /**
  * The queue, refreshed from the server once a second.
@@ -36,24 +36,6 @@ export function queue(mount, { onError }) {
     } catch (error) {
       onError(error, poll);
     }
-  }
-
-  /** A destructive button arms itself first: nothing here is undoable by pressing again. */
-  function confirmable(label, armedLabel, onConfirm) {
-    const button = el('button', { type: 'button', className: 'ghost small' }, label);
-    button.addEventListener('click', () => {
-      if (button.dataset.armed) {
-        onConfirm();
-        return;
-      }
-      button.dataset.armed = '1';
-      button.textContent = armedLabel;
-      setTimeout(() => {
-        delete button.dataset.armed;
-        button.textContent = label;
-      }, 4000);
-    });
-    return button;
   }
 
   function buildItem(item) {
@@ -163,7 +145,7 @@ export function queue(mount, { onError }) {
     hint.textContent = !data.rootChosen
       ? 'The library folder is not available, nothing can be saved.'
       : data.count === 0
-        ? 'Nothing is waiting. Find a game in Browse or Search and press its row to queue it.'
+        ? 'Nothing is waiting. Find a game in Search or Browse and press Download.'
         : data.working
           ? 'Downloading. Move a torrent up to have it fetched sooner.'
           : 'Paused — press Resume to continue. Progress made so far is kept.';

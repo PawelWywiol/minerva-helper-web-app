@@ -2,7 +2,7 @@
 
 Browser-driven counterpart of [Minerva Helper](https://github.com/PawelWywiol/minervahelper) for Linux, shipped as a Docker image. It finds retro games in the public MiNERVA archive and downloads **only the files you pick**, verifies them and files them into an [ES-DE](https://es-de.org) style library.
 
-- browse by collection and platform, search 2.4 million files, game details, favourites
+- search 2.4 million files by name, system or both (`nes mario`, `amiga cd32`), browse by collection and platform, game details beside the list, favourites
 - download queue: order by torrent, pause single games or whole torrents, retry failed ones
 - only the picked file is fetched out of a torrent; nothing is ever uploaded (no incoming connections, no unchoking, torrents removed after each download, zero uploaded bytes checked)
 - every file is verified against the archive's checksum; disc images are unpacked, cartridge zips are kept
@@ -10,7 +10,7 @@ Browser-driven counterpart of [Minerva Helper](https://github.com/PawelWywiol/mi
 
 Part of the [retro](https://github.com/PawelWywiol/retro) stack, where it runs behind a VPN container. Run it behind a VPN: downloading from a swarm exposes your IP to its peers.
 
-On first start open the Overview tab and download the catalogue (about 1.7 GB, a few minutes, once).
+On first start open Home and download the catalogue (about 1.7 GB, a few minutes, once).
 
 ## Run
 

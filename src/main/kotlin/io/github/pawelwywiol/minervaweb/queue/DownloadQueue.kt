@@ -334,15 +334,6 @@ class DownloadQueue(
     }
 
     @Synchronized
-    fun isFavourite(rom: CatalogReader.Rom): Boolean =
-        query(
-            "SELECT 1 FROM favourite WHERE collection = ? AND platform_key = ? AND name = ?",
-            rom.collection,
-            rom.platformKey,
-            rom.name,
-        ) { true }.isNotEmpty()
-
-    @Synchronized
     fun favourites(): List<Triple<String, String, String>> =
         query("SELECT collection, platform_key, name FROM favourite ORDER BY added_at DESC") {
             Triple(getString(1), getString(2), getString(3))

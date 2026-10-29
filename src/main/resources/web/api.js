@@ -37,7 +37,8 @@ export function roms(platformId, cursor) {
   return get(`/api/platforms/${platformId}/roms${query}`);
 }
 
-export const search = (query, offset = 0) => get(`/api/search?q=${encodeURIComponent(query)}&offset=${offset}`);
+export const search = (query, offset = 0, anywhere = false) =>
+  get(`/api/search?q=${encodeURIComponent(query)}&offset=${offset}${anywhere ? '&anywhere=true' : ''}`);
 
 export const rom = (id) => get(`/api/roms/${id}`);
 

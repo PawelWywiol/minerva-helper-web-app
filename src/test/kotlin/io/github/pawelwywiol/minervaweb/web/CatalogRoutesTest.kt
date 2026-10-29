@@ -10,6 +10,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -81,6 +82,32 @@ class CatalogRoutesTest {
             assertEquals(TestCatalog.MD5, detail["md5"]?.jsonPrimitive?.content)
             assertEquals("nes", detail["folder"]?.jsonPrimitive?.content)
             assertEquals(HttpStatusCode.NotFound, get("/api/roms/12345").status)
+        }
+
+    private suspend fun ApplicationTestBuilder.names(query: String) =
+        json("/api/search?q=$query")["roms"]!!.jsonArray.map { it.jsonObject["name"]?.jsonPrimitive?.content }
+
+    @Test
+    fun `a system at either end of the query narrows the search to its folder`() =
+        app {
+            val hit = json("/api/search?q=nes+mario")
+            assertEquals("nes", hit["system"]!!.jsonObject["folder"]?.jsonPrimitive?.content)
+            val rom = hit["roms"]!!.jsonArray.single().jsonObject
+            assertEquals("nes", rom["folder"]?.jsonPrimitive?.content)
+            assertEquals("Nintendo Entertainment System", rom["platform"]?.jsonPrimitive?.content)
+            assertEquals(listOf("Super Mario Bros. (World).zip"), names("mario+nes"))
+            assertEquals(listOf("Super Mario Bros. (World).zip", "Zelda (USA).zip"), names("nes"))
+            assertEquals(listOf("ZoomAmiga (Europe).zip"), names("amiga+cd32"))
+            assertEquals(emptyList(), names("nes+mario&anywhere=true"))
+        }
+
+    @Test
+    fun `a partial system name is offered as a suggestion`() =
+        app {
+            val result = json("/api/search?q=amigacd")
+            assertEquals(JsonNull, result["system"])
+            val folders = result["systems"]!!.jsonArray.map { it.jsonObject["folder"]?.jsonPrimitive?.content }
+            assertEquals(listOf("amigacd32"), folders)
         }
 
     @Test

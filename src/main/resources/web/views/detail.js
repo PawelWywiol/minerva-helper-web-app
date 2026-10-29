@@ -1,79 +1,117 @@
 import * as api from '../api.js';
-import { el, size, spinner } from '../dom.js';
+import { badge, el, icon, size, splitName } from '../dom.js';
 
 /**
- * One ROM, in full: what the archive knows, what the cover lookup found, and where the file would
- * land. Opened from any list and closed back into the list that opened it — the browser's own Back
- * button is not involved, because the lists keep scroll and paging state the hash cannot carry.
+ * One game in full beside the list it was picked from: cover, where it lands, checksums. On a
+ * phone the same panel slides over the list and closes back into it.
  */
-export function detail(mount, { onError }) {
-  const fact = (key, value) =>
-    el('div', { className: 'fact' }, [el('span', { className: 'k' }, key), el('span', { className: 'v' }, value)]);
+export function detail({ toggleQueue, toggleFavourite, onClose }) {
+  const node = el('aside', { className: 'detail', ariaLabel: 'Game details' });
+  let current = null;
+  let full = null;
+  let failed = null;
+  let generation = 0;
 
-  async function open(rom, back) {
-    mount.replaceChildren(spinner(`Loading ${rom.name}…`));
-    let full;
-    try {
-      full = await api.rom(rom.id);
-    } catch (error) {
-      onError(error, () => open(rom, back));
-      return;
-    }
+  const fact = (key, value) => [el('dt', {}, key), el('dd', {}, value)];
 
-    const queueButton = el('button', { type: 'button' });
-    const favouriteButton = el('button', { type: 'button', className: 'ghost' });
-    const paintButtons = (marks) => {
-      queueButton.textContent = marks.queued ? 'Remove from queue' : marks.downloaded ? 'Download again' : 'Download';
-      favouriteButton.textContent = marks.favourite ? 'Remove from favourites' : 'Add to favourites';
-    };
-    paintButtons(full);
-
-    const act = async (request) => {
-      queueButton.disabled = favouriteButton.disabled = true;
-      try {
-        Object.assign(full, await request());
-        paintButtons(full);
-      } catch (error) {
-        onError(error, () => open(rom, back));
-      } finally {
-        queueButton.disabled = favouriteButton.disabled = false;
-      }
-    };
-    queueButton.addEventListener('click', () => act(() => api.toggleQueue(full.id)));
-    favouriteButton.addEventListener('click', () => act(() => api.toggleFavourite(full.id)));
-
-    const backButton = el('button', { type: 'button', className: 'link' }, '‹ Back');
-    backButton.addEventListener('click', back);
-
-    mount.replaceChildren(
-      el('nav', { className: 'crumbs' }, backButton),
-      el(
-        'div',
-        { className: 'detail' },
-        [
-          full.cover ? el('img', { className: 'cover', src: full.cover, alt: `Cover of ${full.name}` }) : null,
-          el(
-            'div',
-            {},
-            [
-              el('h1', {}, full.title || full.name),
-              full.title ? el('p', { className: 'muted' }, full.name) : null,
-              el('div', { className: 'facts-rows' }, [
-                fact('System', full.system || full.platform),
-                fact('Collection', full.collection),
-                fact('Size', size(full.size)),
-                fact('Goes to', full.folder),
-                fact('Torrent', full.torrentPath.split('/').pop()),
-                fact('MD5', full.md5 || '—'),
-                fact('SHA1', full.sha1 || '—'),
-              ]),
-              el('div', { className: 'actions' }, [queueButton, favouriteButton]),
-            ].filter(Boolean),
-          ),
-        ].filter(Boolean),
-      ),
+  function clear() {
+    current = null;
+    full = null;
+    generation++;
+    node.replaceChildren(
+      el('div', { className: 'empty' }, [
+        icon('browse'),
+        el('p', {}, 'Pick a game to see its cover, where it lands and its checksums.'),
+      ]),
     );
   }
 
-  return { open };
+  function paint() {
+    const rom = current;
+    const [title] = splitName(rom.name);
+    const close = el(
+      'button',
+      { type: 'button', className: 'icon-button close', ariaLabel: 'Close details' },
+      icon('close'),
+    );
+    close.addEventListener('click', onClose);
+
+    const get = el('button', { type: 'button', className: 'primary' }, [
+      icon(rom.queued ? 'close' : 'download'),
+      rom.queued ? 'Remove from queue' : rom.downloaded ? 'Download again' : 'Download',
+    ]);
+    get.addEventListener('click', () => toggleQueue(rom));
+    const favLabel = rom.favourite ? 'Remove from favourites' : 'Add to favourites';
+    const fav = el(
+      'button',
+      {
+        type: 'button',
+        className: 'ghost icon-button fav',
+        title: favLabel,
+        ariaLabel: favLabel,
+        ariaPressed: String(Boolean(rom.favourite)),
+      },
+      icon('heart'),
+    );
+    fav.addEventListener('click', () => toggleFavourite(rom));
+
+    const cover = full?.cover
+      ? el('img', { className: 'cover', src: full.cover, alt: `Cover of ${full.title || title}` })
+      : el(
+          'div',
+          { className: `cover blank f-${rom.family}` },
+          full || failed ? 'No cover found' : 'Looking for a cover…',
+        );
+
+    const parts = [
+      close,
+      cover,
+      el('h2', {}, full?.title || title),
+      el('p', { className: 'file' }, rom.name),
+      failed ? el('p', { className: 'error' }, `Details could not be loaded: ${failed}`) : null,
+      el('div', { className: 'lands' }, [
+        badge(rom.folder, rom.family),
+        el('div', {}, [el('strong', {}, `roms/${rom.folder}`), el('span', {}, `${rom.platform} in ES-DE`)]),
+      ]),
+      rom.downloaded && !rom.queued ? el('p', { className: 'ok' }, [icon('check'), 'Already in your library']) : null,
+      el('div', { className: 'actions' }, [get, fav]),
+      el('dl', { className: 'facts' }, [
+        ...fact('Size', size(rom.size)),
+        ...fact('Collection', rom.collection),
+        ...fact('Torrent', full ? full.torrentPath.split('/').pop() : '…'),
+        ...fact('MD5', full ? full.md5 || 'not listed' : '…'),
+        ...fact('SHA-1', full ? full.sha1 || 'not listed' : '…'),
+      ]),
+    ];
+    node.replaceChildren(...parts.filter(Boolean));
+  }
+
+  async function show(rom) {
+    current = rom;
+    full = null;
+    failed = null;
+    const mine = ++generation;
+    paint();
+    node.scrollTop = 0;
+    try {
+      const answer = await api.rom(rom.id);
+      if (mine !== generation) return;
+      full = answer;
+      paint();
+    } catch (error) {
+      if (mine !== generation) return;
+      failed = error.message;
+      paint();
+    }
+  }
+
+  clear();
+  return {
+    node,
+    show,
+    clear,
+    refresh(rom) {
+      if (current?.id === rom.id) paint();
+    },
+  };
 }
