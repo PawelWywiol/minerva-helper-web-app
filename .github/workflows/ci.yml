@@ -36,7 +36,7 @@ jobs:
         run: pnpm fmt:check
 
       - name: lint
-        run: pnpm lint:sh && pnpm lint:docker && pnpm lint:actions
+        run: pnpm lint:js && pnpm lint:sh && pnpm lint:docker && pnpm lint:actions
 
       - name: secrets
         run: pnpm secrets

@@ -126,6 +126,17 @@ fun Route.queueRoutes(s: Services) {
     // forgets the record only; the file itself is never touched from here
     delete("/api/downloaded/{id}") { call.byId { s.queue.removeDownloaded(it) } }
 
+    get("/api/favourites") {
+        val roms = s.catalog.read { reader -> s.queue.favourites().mapNotNull { (c, p, n) -> reader.rom(c, p, n) } }
+        if (roms == null) return@get call.noCatalog()
+        val marks = Marks(s.queue)
+        call.json(buildJsonObject { put("roms", buildJsonArray { roms.forEach { add(romJson(it, marks)) } }) })
+    }
+
+    post("/api/favourites") {
+        call.withRom(s.catalog) { rom -> call.json(buildJsonObject { put("favourite", s.queue.toggleFavourite(rom)) }) }
+    }
+
     get("/api/settings") { call.json(settingsJson(s)) }
 
     post("/api/settings") {
@@ -140,13 +151,32 @@ fun Route.queueRoutes(s: Services) {
             } else {
                 null
             }
+        val previous = change?.let { s.settings.folderFor(it.first, it.second) }
         s.settings.update(
             concurrent = body.int("concurrentDownloads")?.takeIf { it > 0 },
             unpack = body["unpackArchives"]?.jsonPrimitive?.booleanOrNull,
             folder = change,
         )
+        if (change != null && previous != null && previous != change.third &&
+            body["moveFiles"]?.jsonPrimitive?.booleanOrNull == true
+        ) {
+            moveDownloaded(s, change, previous)
+        }
         call.json(settingsJson(s))
     }
+}
+
+// files follow the new mapping; records whose files are gone keep their folder untouched
+private fun moveDownloaded(
+    s: Services,
+    change: Triple<String, String, String>,
+    previous: String,
+) {
+    val (collection, platformKey, folder) = change
+    s.queue
+        .downloaded()
+        .filter { it.collection == collection && it.platformKey == platformKey && it.folder == previous }
+        .forEach { if (s.placement.move(previous, folder, it.name)) s.queue.setDownloadedFolder(it.id, folder) }
 }
 
 private fun queueJson(s: Services): JsonObject {

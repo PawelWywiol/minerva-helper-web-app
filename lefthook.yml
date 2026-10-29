@@ -2,8 +2,11 @@ pre-commit:
   parallel: true
   jobs:
     - name: format
-      glob: '*.{js,json,jsonc,yaml,yml,toml}'
+      glob: '*.{js,json,jsonc,yaml,yml,toml,css,html}'
       run: pnpm exec oxfmt --check {staged_files}
+    - name: js
+      glob: 'src/main/resources/web/**/*.js'
+      run: pnpm exec oxlint --deny-warnings {staged_files}
     - name: shellcheck
       glob: '*.sh'
       run: pnpm lint:sh

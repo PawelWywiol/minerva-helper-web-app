@@ -55,6 +55,33 @@ class FilePlacement(
             dir(folder).resolve(name).let { it.isRegularFile() && it.fileSize() == size }
         }.getOrDefault(false)
 
+    // an unpacked disc is a .cue and its tracks named after the game, so the whole set moves together
+    fun move(
+        fromFolder: String,
+        toFolder: String,
+        name: String,
+    ): Boolean {
+        val origin = dir(fromFolder)
+        if (!Files.isDirectory(origin)) return false
+        val stem = name.substringBeforeLast('.')
+        val sources =
+            Files.list(origin).use { files ->
+                files
+                    .filter {
+                        it.isRegularFile() &&
+                            (it.fileName.toString() == name || it.fileName.toString().startsWith(stem))
+                    }.toList()
+            }
+        sources.forEach {
+            Files.move(
+                it,
+                target(toFolder, it.fileName.toString()),
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+        }
+        return sources.isNotEmpty()
+    }
+
     fun freeBytes(): Long = Files.getFileStore(root).usableSpace
 
     private fun dir(folder: String): Path {
