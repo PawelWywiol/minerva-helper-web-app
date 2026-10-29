@@ -57,6 +57,23 @@ class DownloadTest {
     }
 
     @Test
+    fun `every file arrives intact on its own`() {
+        val md5 = { bytes: ByteArray -> MessageDigest.getInstance("MD5").digest(bytes).toHexString() }
+        val known = swarm.content.mapValues { md5(it.value) }
+        for (name in listOf("c.nes", "a.nes", "b.nes")) {
+            val target = dir.resolve("each-$name")
+            val wanted = swarm.index(name)
+            downloader().use { runBlocking { it.download(swarm.torrent, target, { setOf(wanted) }) {} } }
+            val got = md5(target.resolve(swarm.info.files().filePath(wanted)).readBytes())
+            val files =
+                (0 until swarm.info.numFiles()).map {
+                    "${swarm.info.files().fileName(it)}@${swarm.info.files().fileOffset(it)}"
+                }
+            assertEquals(known.getValue(name), got, "$name index=$wanted files=$files known=$known")
+        }
+    }
+
+    @Test
     fun `the runner downloads, verifies and files a queued rom`() {
         val torrentPath = "No-Intro/pack.torrent"
         val torrents = dir.resolve("torrents")
