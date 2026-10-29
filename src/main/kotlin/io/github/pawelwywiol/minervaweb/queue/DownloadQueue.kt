@@ -61,6 +61,9 @@ class DownloadQueue(
                 "collection TEXT NOT NULL, platform_key TEXT NOT NULL, torrent_path TEXT NOT NULL," +
                 "so_id INTEGER NOT NULL, folder TEXT NOT NULL, completed_at INTEGER NOT NULL)",
             "CREATE UNIQUE INDEX IF NOT EXISTS ux_downloaded ON downloaded(torrent_path, so_id)",
+            "CREATE TABLE IF NOT EXISTS favourite(collection TEXT NOT NULL, platform_key TEXT NOT NULL," +
+                "name TEXT NOT NULL," +
+                "added_at INTEGER NOT NULL, PRIMARY KEY(collection, platform_key, name))",
         ).forEach { sql -> db.createStatement().use { it.execute(sql) } }
     }
 
@@ -301,6 +304,49 @@ class DownloadQueue(
         st: java.sql.PreparedStatement,
         args: Array<out Any?>,
     ) = st.apply { args.forEachIndexed { i, arg -> setObject(i + 1, if (arg is Enum<*>) arg.name else arg) } }
+
+    @Synchronized
+    fun setDownloadedFolder(
+        id: Long,
+        folder: String,
+    ) = update("UPDATE downloaded SET folder = ? WHERE id = ?", folder, id)
+
+    // keyed by archive path, not row id, so favourites survive a catalogue rebuild
+    @Synchronized
+    fun toggleFavourite(rom: CatalogReader.Rom): Boolean {
+        val removed =
+            update(
+                "DELETE FROM favourite WHERE collection = ? AND platform_key = ? AND name = ?",
+                rom.collection,
+                rom.platformKey,
+                rom.name,
+            )
+        if (removed == 0) {
+            update(
+                "INSERT INTO favourite VALUES(?,?,?,?)",
+                rom.collection,
+                rom.platformKey,
+                rom.name,
+                System.currentTimeMillis(),
+            )
+        }
+        return removed == 0
+    }
+
+    @Synchronized
+    fun isFavourite(rom: CatalogReader.Rom): Boolean =
+        query(
+            "SELECT 1 FROM favourite WHERE collection = ? AND platform_key = ? AND name = ?",
+            rom.collection,
+            rom.platformKey,
+            rom.name,
+        ) { true }.isNotEmpty()
+
+    @Synchronized
+    fun favourites(): List<Triple<String, String, String>> =
+        query("SELECT collection, platform_key, name FROM favourite ORDER BY added_at DESC") {
+            Triple(getString(1), getString(2), getString(3))
+        }
 
     @Synchronized
     override fun close() = db.close()

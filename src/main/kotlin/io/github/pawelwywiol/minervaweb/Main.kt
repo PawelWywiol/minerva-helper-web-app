@@ -12,6 +12,7 @@ import io.github.pawelwywiol.minervaweb.settings.Settings
 import io.github.pawelwywiol.minervaweb.web.Services
 import io.github.pawelwywiol.minervaweb.web.catalogRoutes
 import io.github.pawelwywiol.minervaweb.web.queueRoutes
+import io.github.pawelwywiol.minervaweb.web.webRoutes
 import io.ktor.http.ContentType
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -92,6 +93,7 @@ fun Application.module(
     routing {
         catalogRoutes(services.catalog, services.systems, services.settings, services.queue)
         queueRoutes(services)
+        webRoutes()
     }
 }
 

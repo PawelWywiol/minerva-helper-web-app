@@ -143,6 +143,7 @@ fun Route.catalogRoutes(
                     put("torrentPath", rom.torrentPath)
                     put("md5", rom.md5)
                     put("sha1", rom.sha1)
+                    put("favourite", queue.isFavourite(rom))
                     put("folder", settings.folderFor(rom.collection, rom.platformKey))
                     put(
                         "platform",
@@ -172,6 +173,11 @@ private fun romsJson(
             )
         }
     }
+
+internal fun romJson(
+    rom: CatalogReader.Rom,
+    marks: Marks,
+): JsonObject = buildJsonObject { putRom(rom, marks) }
 
 private fun JsonObjectBuilder.putRom(
     rom: CatalogReader.Rom,
@@ -216,7 +222,7 @@ internal suspend fun ApplicationCall.body(): JsonObject? =
         Json.parseToJsonElement(receiveText()).jsonObject
     }.getOrNull()
 
-private suspend fun ApplicationCall.noCatalog() =
+internal suspend fun ApplicationCall.noCatalog() =
     json(buildJsonObject { put("catalogReady", false) }, HttpStatusCode.ServiceUnavailable)
 
 internal suspend fun ApplicationCall.badRequest() = respondText("", status = HttpStatusCode.BadRequest)
