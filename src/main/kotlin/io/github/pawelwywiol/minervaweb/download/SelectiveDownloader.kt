@@ -18,6 +18,7 @@ import org.libtorrent4j.alerts.AlertType
 import org.libtorrent4j.swig.add_torrent_params
 import org.libtorrent4j.swig.error_code
 import org.libtorrent4j.swig.load_torrent_limits
+import org.libtorrent4j.swig.session_params
 import org.libtorrent4j.swig.settings_pack
 import org.libtorrent4j.swig.torrent_flags_t
 import org.libtorrent4j.swig.torrent_info
@@ -54,7 +55,10 @@ class SelectiveDownloader(
     private val session by lazy {
         SessionManager().also {
             it.addListener(problems)
-            it.start(SessionParams(noSharingSettings()))
+            // plain pread/pwrite: libtorrent's mmap backend mixes mmap and write calls, which its own docs
+            // warn corrupts data on Btrfs/ZFS, and in CI left verified pieces missing from the file
+            val params = session_params(noSharingSettings().swig()).apply { set_posix_disk_io_constructor() }
+            it.start(SessionParams(params))
         }
     }
 
