@@ -25,4 +25,10 @@ class PlatformFoldersTest {
             folders.folderFor("No-Intro", "Nintendo - Nintendo Music (Tracks)"),
         )
     }
+
+    @Test
+    fun `common shorthands name their systems`() {
+        assertEquals(listOf("sms"), systems.aliasesFor("mastersystem"))
+        assertEquals(listOf("pce", "tg16", "turbografx16"), systems.aliasesFor("pcengine"))
+    }
 }
