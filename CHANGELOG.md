@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.1](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.0...v0.1.1) (2026-10-29)
+
+### Bug Fixes
+
+* map major consoles missing from the platform map ([4f532b5](https://github.com/PawelWywiol/minerva-helper-web-app/commit/4f532b5d5007a69718f75abeb57378e9c40eece0))
+
 ## 0.1.0 (2026-10-29)
 
 ### Features
