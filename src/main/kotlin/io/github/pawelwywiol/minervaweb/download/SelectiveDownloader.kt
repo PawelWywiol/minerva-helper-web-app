@@ -92,7 +92,7 @@ class SelectiveDownloader(
                 while (true) {
                     currentCoroutineContext().ensureActive()
                     val status = handle.status()
-                    // only complete, hash-checked pieces count; is_finished can be true before the files are
+                    // progress of the wanted files only, counting complete hash-checked pieces
                     val verified = handle.fileProgress(TorrentHandle.PIECE_GRANULARITY)
                     val done = wanted.sumOf { verified[it] }
                     if (done >= total) {
