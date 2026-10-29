@@ -2,7 +2,9 @@ package io.github.pawelwywiol.minervaweb.catalog
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 
@@ -47,7 +49,10 @@ class CatalogSync(
         }
         val version = runCatching { downloader.version() }.getOrNull()
         downloader.download(sourceFile) { onStage(Stage.Downloading(it.downloaded, it.total)) }
-        CatalogImporter().import(sourceFile, catalogFile, version) { onStage(Stage.Importing(it.imported, it.total)) }
+        // built aside and swapped in, so the current catalog stays searchable during a rebuild
+        val building = catalogFile.resolveSibling("${catalogFile.fileName}.building")
+        CatalogImporter().import(sourceFile, building, version) { onStage(Stage.Importing(it.imported, it.total)) }
+        Files.move(building, catalogFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
         sourceFile.deleteIfExists()
         sourceFile.resolveSibling("${sourceFile.fileName}.etag").deleteIfExists()
         onStage(Stage.Ready)
