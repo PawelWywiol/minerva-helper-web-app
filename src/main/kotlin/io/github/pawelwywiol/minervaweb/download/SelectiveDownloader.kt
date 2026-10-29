@@ -10,6 +10,7 @@ import org.libtorrent4j.SessionManager
 import org.libtorrent4j.SessionParams
 import org.libtorrent4j.SettingsPack
 import org.libtorrent4j.TcpEndpoint
+import org.libtorrent4j.TorrentHandle
 import org.libtorrent4j.TorrentInfo
 import org.libtorrent4j.swig.add_torrent_params
 import org.libtorrent4j.swig.error_code
@@ -84,8 +85,10 @@ class SelectiveDownloader(
                 while (true) {
                     currentCoroutineContext().ensureActive()
                     val status = handle.status()
-                    val done = (status.progress() * total).toLong()
-                    if (status.isFinished || status.progress() >= 1f) {
+                    // only complete, hash-checked pieces count; is_finished can be true before the files are
+                    val verified = handle.fileProgress(TorrentHandle.PIECE_GRANULARITY)
+                    val done = wanted.sumOf { verified[it] }
+                    if (done >= total) {
                         result = Result(status.totalPayloadUpload(), status.totalUpload())
                         break
                     }
