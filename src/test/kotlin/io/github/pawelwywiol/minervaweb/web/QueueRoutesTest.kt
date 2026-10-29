@@ -70,6 +70,18 @@ class QueueRoutesTest {
             .single()
 
     @Test
+    fun `queued games come back as catalogue rows carrying their queue id`() =
+        app {
+            val id = mario().str("id")
+            post("/api/queue", """{"romId":$id}""")
+            val row = get("/api/queue/roms").list("roms").single()
+            assertEquals(id, row.str("id"))
+            assertEquals(queueItem().str("id"), row.str("queueId"))
+            assertEquals("nes", row.str("folder"))
+            assertEquals("true", row.str("queued"))
+        }
+
+    @Test
     fun `queueing marks the rom and groups it by torrent`() =
         app {
             val id = mario().str("id")

@@ -52,10 +52,10 @@ export const updateSettings = (change) => send('/api/settings', change);
 
 export const queue = () => get('/api/queue');
 
+export const queueRoms = () => get('/api/queue/roms');
+
 /** Answers with the ROM's marks as they now stand, which is what the caller repaints its row from. */
 export const toggleQueue = (romId) => send('/api/queue', { romId });
-
-export const pauseItem = (id, paused) => send('/api/queue/pause', { id, paused });
 
 export const pauseGroup = (torrentPath, paused) => send('/api/queue/pause', { torrentPath, paused });
 

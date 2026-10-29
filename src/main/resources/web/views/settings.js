@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { el, spinner } from '../dom.js';
+import { el, infiniteScroll, spinner } from '../dom.js';
 
 /**
  * Download settings and the folder each platform lands in, inside the library mounted into the container.
@@ -32,6 +32,26 @@ export function settings(mount, { onError }) {
         );
         button.addEventListener('click', () => apply({ concurrentDownloads: n }));
         return button;
+      }),
+    );
+  }
+
+  function scrolling() {
+    const on = infiniteScroll.get();
+    return el(
+      'div',
+      { className: 'actions' },
+      [true, false].map((choice) => {
+        const node = el(
+          'button',
+          { type: 'button', className: choice === on ? '' : 'ghost' },
+          choice ? 'Load as I scroll' : 'Show more button',
+        );
+        node.addEventListener('click', () => {
+          infiniteScroll.set(choice);
+          node.parentElement.replaceWith(scrolling());
+        });
+        return node;
       }),
     );
   }
@@ -131,6 +151,13 @@ export function settings(mount, { onError }) {
           'unpacked as they land and the zip is thrown away.',
       ),
       unpacking(data),
+      el('h2', {}, 'Long lists'),
+      el(
+        'p',
+        { className: 'muted' },
+        'Load the next games automatically when you reach the bottom of a list. Remembered in this browser only.',
+      ),
+      scrolling(),
       el('h2', {}, 'Where each platform lands'),
       rows.length === 0
         ? el('p', { className: 'muted' }, 'Queue something to see where it will go.')

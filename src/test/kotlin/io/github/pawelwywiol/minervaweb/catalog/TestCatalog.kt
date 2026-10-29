@@ -18,14 +18,17 @@ internal object TestCatalog {
             listOf("./TOSEC/Commodore/Amiga/Games/Foo (1990).adf", "TOSEC/amiga.torrent", 1, null),
         )
 
-    fun source(path: Path): Path {
+    fun source(
+        path: Path,
+        extra: List<List<Any?>> = emptyList(),
+    ): Path {
         DriverManager.getConnection("jdbc:sqlite:$path").use { db ->
             db.exec(
                 "CREATE TABLE files(id INTEGER PRIMARY KEY, full_path TEXT, file_name TEXT, size INTEGER, " +
                     "md5 TEXT, sha1 TEXT, crc32 TEXT, torrents TEXT, so_id INTEGER, magnet TEXT)",
             )
             db.prepareStatement("INSERT INTO files VALUES(?,?,?,?,?,?,?,?,?,?)").use { insert ->
-                rows.forEachIndexed { i, (fullPath, torrent, soId, hash) ->
+                (rows + extra).forEachIndexed { i, (fullPath, torrent, soId, hash) ->
                     insert.setInt(1, i + 1)
                     insert.setString(2, fullPath as String)
                     insert.setString(3, fullPath.substringAfterLast('/'))
@@ -44,9 +47,12 @@ internal object TestCatalog {
         return path
     }
 
-    fun catalog(dir: Path): Path {
+    fun catalog(
+        dir: Path,
+        extra: List<List<Any?>> = emptyList(),
+    ): Path {
         val target = dir.resolve("catalog.db")
-        runBlocking { CatalogImporter().import(source(dir.resolve("hashes.db")), target, "etag:1") {} }
+        runBlocking { CatalogImporter().import(source(dir.resolve("hashes.db"), extra), target, "etag:1") {} }
         return target
     }
 }
