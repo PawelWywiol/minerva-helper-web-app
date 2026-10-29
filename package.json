@@ -1,6 +1,6 @@
 {
   "name": "minerva-helper-web-app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Pick single games out of the MiNERVA archive from a browser, packaged as a Docker image",
   "license": "MIT",
