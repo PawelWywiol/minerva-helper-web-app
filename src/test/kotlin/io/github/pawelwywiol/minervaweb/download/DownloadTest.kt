@@ -13,6 +13,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.net.URI
 import java.net.http.HttpClient
 import java.nio.file.Files
@@ -26,6 +27,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DownloadTest {
@@ -85,7 +87,8 @@ class DownloadTest {
             )
         assertTrue(runner.toggle(rom))
 
-        runBlocking { withTimeout(TIMEOUT_MS) { while (!queue.isDownloaded(rom)) delay(POLL_MS) } }
+        val done = runBlocking { withTimeoutOrNull(TIMEOUT_MS) { while (!queue.isDownloaded(rom)) delay(POLL_MS) } }
+        assertNotNull(done, "not downloaded: queue=${queue.all()} active=${queue.active} working=${runner.working}")
         assertContentEquals(bytes, dir.resolve("library/roms/nes/c.nes").readBytes())
         assertEquals(emptyList(), queue.all())
         assertEquals("nes", queue.downloaded().single().folder)
