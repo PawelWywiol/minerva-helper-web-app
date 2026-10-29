@@ -7,6 +7,31 @@ import kotlin.io.path.absolutePathString
 
 private const val DEFAULT_PAGE = 50
 
+// No-Intro and TOSEC release tags: English-speaking or Polish releases first, broken or unfinished dumps last
+private val PREFERRED_TAGS =
+    listOf("(USA", "(Europe", "(World", "(US)", "(EU)", "(GB)", "(PL)", "(En", ",En", "(Pl", ",Pl")
+private val UNWANTED_TAGS =
+    listOf(
+        "[b",
+        "[h",
+        "[a",
+        "[t",
+        "[f",
+        "[cr",
+        "[o",
+        "[p",
+        "[m",
+        "[u",
+        "(Beta",
+        "(Proto",
+        "(Demo",
+        "(Sample",
+        "(Pirate",
+        "(Hack",
+    )
+
+private fun likeAny(tags: List<String>) = tags.joinToString(" OR ", "(", ")") { "instr(f.name, '$it') > 0" }
+
 class CatalogReader(
     file: Path,
 ) : AutoCloseable {
@@ -131,7 +156,12 @@ class CatalogReader(
         if (platformIds.isEmpty()) return emptyList()
         val where =
             "f.platform_id IN (${platformIds.joinToString(",")})" + terms.joinToString("") { " AND f.name LIKE ?" }
-        val order = if (terms.isEmpty()) " ORDER BY f.name, f.id" else " ORDER BY f.name LIKE ? DESC, f.name, f.id"
+        val order =
+            if (terms.isEmpty()) {
+                " ORDER BY f.name, f.id"
+            } else {
+                " ORDER BY f.name LIKE ? DESC, ${likeAny(UNWANTED_TAGS)}, ${likeAny(PREFERRED_TAGS)} DESC, f.name, f.id"
+            }
         val args = terms.map { "%$it%" } + terms.take(1).map { "$it%" }
         return roms("FROM file f", where + order, args, limit, offset)
     }

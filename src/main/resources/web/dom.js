@@ -91,6 +91,45 @@ export function confirmable(label, armedLabel, onConfirm) {
   return node;
 }
 
+const SCROLL_KEY = 'minerva.infiniteScroll';
+
+/** A per-browser choice, so it lives in this browser rather than in the server's settings. */
+export const infiniteScroll = {
+  get() {
+    try {
+      return localStorage.getItem(SCROLL_KEY) === '1';
+    } catch {
+      return false;
+    }
+  },
+  set(on) {
+    try {
+      localStorage.setItem(SCROLL_KEY, on ? '1' : '0');
+    } catch {
+      // private windows may refuse storage; the button keeps working
+    }
+  },
+};
+
+/**
+ * Presses a "Show more" button whenever it scrolls near the screen, if the user chose so. Watching
+ * again after each press catches a short page whose button is still in view once it has loaded.
+ */
+export function loadOnScroll(node) {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting) || !infiniteScroll.get()) return;
+      if (!node.hidden && !node.disabled) node.click();
+      setTimeout(() => {
+        observer.unobserve(node);
+        observer.observe(node);
+      }, 400);
+    },
+    { rootMargin: '600px 0px' },
+  );
+  observer.observe(node);
+}
+
 let toastTimer = null;
 
 export function toast(message) {

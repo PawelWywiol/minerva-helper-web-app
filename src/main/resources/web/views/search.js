@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { badge, button, count, el, icon } from '../dom.js';
+import { badge, button, count, el, icon, loadOnScroll } from '../dom.js';
 import { games } from './games.js';
 
 /** Long enough that a two-letter prefix does not sweep the whole 2.4M-row index on every keystroke. */
@@ -15,6 +15,7 @@ export function search(mount, { onError, setQuery }) {
   const heading = el('h1', {}, 'Search');
   const more = button('Show more', () => run(true), 'ghost wide');
   more.hidden = true;
+  loadOnScroll(more);
   const status = el('p', { className: 'muted' });
   const systems = el('div', { className: 'chips' });
   const hint = el('div', { className: 'hint' }, [
@@ -55,6 +56,7 @@ export function search(mount, { onError, setQuery }) {
     // request is allowed to paint.
     const mine = ++generation;
     if (!append) offset = 0;
+    more.disabled = true;
     try {
       const result = await api.search(query, offset, anywhere);
       if (mine !== generation) return;
@@ -77,6 +79,8 @@ export function search(mount, { onError, setQuery }) {
         view.open();
         run(false);
       });
+    } finally {
+      if (mine === generation) more.disabled = false;
     }
   }
 

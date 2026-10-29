@@ -1,106 +1,100 @@
 import * as api from '../api.js';
-import { confirmable, count, el, size } from '../dom.js';
+import { button, confirmable, count, el, size, toast } from '../dom.js';
+import { games } from './games.js';
 
 /**
  * The queue, refreshed from the server once a second.
  *
  * Two rules shape this view. Polling stops the moment the tab is hidden or the user leaves the
- * view — a forgotten tab must not keep polling the server. And the list is only rebuilt when
- * its shape changes: a button that re-flows under a finger every second is how the wrong row gets
+ * view — a forgotten tab must not keep polling the server. And the lists are only rebuilt when
+ * their shape changes: a button that re-flows under a finger every second is how the wrong row gets
  * pressed, so the same nodes are kept and only their text is refreshed.
  */
 const POLL_MS = 1000;
+
+const STATES = {
+  queued: { text: 'Waiting', kind: '' },
+  downloading: { text: 'Downloading', kind: 'busy' },
+  verifying: { text: 'Checking', kind: 'busy' },
+  paused: { text: 'Paused', kind: '' },
+  failed: { text: 'Failed', kind: 'bad' },
+};
 
 export function queue(mount, { onError }) {
   let timer = null;
   let shape = '';
   const updaters = new Map();
+  const romOf = new Map();
+
+  const list = games({
+    onRemove: async (rom) => {
+      try {
+        await api.removeQueued(rom.queueId);
+        toast('Removed from the queue');
+        await poll();
+      } catch (error) {
+        toast(`Could not change the queue: ${error.message}`);
+      }
+    },
+  });
 
   const summary = el('p', { className: 'muted' });
   const free = el('p', { className: 'muted' });
   const hint = el('p', { className: 'muted' });
-  const runButton = el('button', { type: 'button', className: 'ghost', hidden: true });
-  const retryButton = el('button', { type: 'button', className: 'ghost', hidden: true }, 'Retry failed');
+  const runButton = button('', () => act(() => api.setRunning(!running)), 'ghost');
+  const retryButton = button('Retry failed', () => act(() => api.retryFailed()), 'ghost');
   const actions = el('div', { className: 'actions' }, [runButton, retryButton]);
-  const groups = el('div');
+  const torrents = el('div');
   const history = el('div');
 
   let running = false;
-  runButton.addEventListener('click', () => act(() => api.setRunning(!running)));
-  retryButton.addEventListener('click', () => act(() => api.retryFailed()));
 
   async function act(request) {
     try {
       await request();
       await poll();
     } catch (error) {
-      onError(error, poll);
+      onError(error, open);
     }
   }
 
-  function buildItem(item) {
-    const meta = el('span', { className: 'meta' });
-    const error = el('span', { className: 'error small' });
-    const pause = el('button', { type: 'button', className: 'ghost small' });
-    const remove = confirmable('Remove', 'Remove?', () => act(() => api.removeQueued(item.id)));
-    pause.addEventListener('click', () => act(() => api.pauseItem(item.id, pause.dataset.paused !== '1')));
-
-    updaters.set(`item-${item.id}`, (fresh) => {
-      meta.textContent = `${fresh.platform} · ${size(fresh.size)} · ${fresh.state} · → ${fresh.folder}`;
-      error.textContent = fresh.error || '';
-      error.hidden = !fresh.error;
-      pause.dataset.paused = fresh.state === 'paused' ? '1' : '0';
-      pause.textContent = fresh.state === 'paused' ? 'Resume' : 'Pause';
-    });
-
-    return el('div', { className: 'row static' }, [
-      el('span', { className: 'name' }, [item.name, error]),
-      meta,
-      el('span', { className: 'buttons' }, [pause, remove]),
-    ]);
-  }
-
-  function buildGroup(group, index, total) {
-    const progress = el('p', { className: 'progress' });
+  function buildTorrent(group, index, total) {
+    const progress = el('span', { className: 'muted small' });
     const fill = el('span');
     const bar = el('div', { className: 'meter' }, fill);
     const pause = el('button', { type: 'button', className: 'ghost small' });
-    const up = el('button', { type: 'button', className: 'ghost small', disabled: index === 0 }, '↑');
-    const down = el('button', { type: 'button', className: 'ghost small', disabled: index === total - 1 }, '↓');
-
+    const up = button('↑', () => act(() => api.moveGroup(index, index - 1)), 'ghost small');
+    const down = button('↓', () => act(() => api.moveGroup(index, index + 1)), 'ghost small');
+    up.disabled = index === 0;
+    down.disabled = index === total - 1;
+    up.title = 'Fetch sooner';
+    down.title = 'Fetch later';
     pause.addEventListener('click', () => act(() => api.pauseGroup(group.torrentPath, pause.dataset.paused !== '1')));
-    up.addEventListener('click', () => act(() => api.moveGroup(index, index - 1)));
-    down.addEventListener('click', () => act(() => api.moveGroup(index, index + 1)));
 
-    updaters.set(`group-${group.torrentPath}`, (fresh) => {
+    updaters.set(group.torrentPath, (fresh) => {
       pause.dataset.paused = fresh.paused ? '1' : '0';
-      pause.textContent = fresh.paused ? 'Resume torrent' : 'Pause torrent';
+      pause.textContent = fresh.paused ? 'Resume' : 'Pause';
       const active = fresh.active;
-      progress.hidden = !active;
       bar.hidden = !active;
-      if (active) {
-        progress.textContent = `${active.percent}% · ${size(active.rate)}/s · ${active.peers} peers`;
-        fill.style.width = `${active.percent}%`;
-      }
+      progress.textContent = active
+        ? `${active.percent}%, ${size(active.rate)}/s from ${active.peers} peers`
+        : `${count(fresh.items.length)} ${fresh.items.length === 1 ? 'game' : 'games'}`;
+      if (active) fill.style.width = `${active.percent}%`;
     });
 
-    return el('section', { className: 'group' }, [
-      el('div', { className: 'group-head' }, [
-        el('span', { className: 'name' }, group.label),
-        el('span', { className: 'buttons' }, [up, down, pause]),
-      ]),
-      progress,
-      bar,
-      el('div', { className: 'list' }, group.items.map(buildItem)),
+    return el('div', { className: 'row' }, [
+      el('span', { className: 'name' }, [group.label.replace(/\.torrent$/, ''), el('br'), progress, bar]),
+      el('span', {}, ''),
+      el('span', { className: 'buttons' }, [up, down, pause]),
     ]);
   }
 
   function buildHistory(data) {
     if (data.downloadedTotal === 0) return [];
     const rows = data.downloaded.map((done) =>
-      el('div', { className: 'row static' }, [
+      el('div', { className: 'row' }, [
         el('span', { className: 'name' }, done.name),
-        el('span', { className: 'meta' }, size(done.size) + (done.folder ? ` · in ${done.folder}` : '')),
+        el('span', { className: 'meta' }, done.folder ? `${size(done.size)} in roms/${done.folder}` : size(done.size)),
         el(
           'span',
           { className: 'buttons' },
@@ -122,34 +116,51 @@ export function queue(mount, { onError }) {
       data.downloaded.map((d) => d.id).join(','),
     ].join('#');
 
+  async function rebuild(data) {
+    updaters.clear();
+    torrents.replaceChildren(
+      ...(data.groups.length > 0
+        ? [
+            el('h2', {}, 'Torrents'),
+            el(
+              'div',
+              { className: 'list' },
+              data.groups.map((g, i) => buildTorrent(g, i, data.groups.length)),
+            ),
+          ]
+        : []),
+    );
+    history.replaceChildren(...buildHistory(data));
+    const { roms } = await api.queueRoms();
+    romOf.clear();
+    for (const rom of roms) romOf.set(rom.queueId, rom.id);
+    list.set(roms);
+  }
+
   function paint(data) {
-    const next = shapeOf(data);
-    if (next !== shape) {
-      shape = next;
-      updaters.clear();
-      groups.replaceChildren(...data.groups.map((g, i) => buildGroup(g, i, data.groups.length)));
-      history.replaceChildren(...buildHistory(data));
-    }
     data.groups.forEach((group) => {
-      updaters.get(`group-${group.torrentPath}`)?.(group);
-      group.items.forEach((item) => updaters.get(`item-${item.id}`)?.(item));
+      updaters.get(group.torrentPath)?.(group);
+      group.items.forEach((item) => {
+        const state = STATES[item.state] || STATES.queued;
+        const percent = item.state === 'downloading' && group.active ? ` ${group.active.percent}%` : '';
+        const text = item.error ? `${state.text}: ${item.error}` : state.text + percent;
+        list.patch(romOf.get(item.id), { status: { text, kind: state.kind } });
+      });
     });
 
     running = data.working;
-    summary.textContent = `${count(data.count)} ROMs · ${size(data.bytes)} · ${data.groups.length} torrents`;
+    summary.textContent = `${count(data.count)} ${data.count === 1 ? 'game' : 'games'}, ${size(data.bytes)} in ${count(data.groups.length)} ${data.groups.length === 1 ? 'torrent' : 'torrents'}`;
     free.textContent =
       data.bytes > data.freeBytes
-        ? `Will not fit — ${size(data.freeBytes)} free in the library`
+        ? `Will not fit: only ${size(data.freeBytes)} free in the library`
         : `${size(data.freeBytes)} free in the library`;
     free.className = data.bytes > data.freeBytes ? 'warn' : 'muted';
-    hint.textContent = !data.rootChosen
-      ? 'The library folder is not available, nothing can be saved.'
-      : data.count === 0
-        ? 'Nothing is waiting. Find a game in Search or Browse and press Download.'
+    hint.textContent =
+      data.count === 0
+        ? 'Nothing is waiting. Find a game in Search or Browse and press its download button.'
         : data.working
           ? 'Downloading. Move a torrent up to have it fetched sooner.'
-          : 'Paused — press Resume to continue. Progress made so far is kept.';
-    hint.className = data.rootChosen ? 'muted' : 'warn';
+          : 'Paused. Press Resume to continue; progress made so far is kept.';
     runButton.hidden = data.count === 0;
     runButton.textContent = data.working ? 'Pause all' : 'Resume';
     retryButton.hidden = !data.failed;
@@ -157,12 +168,16 @@ export function queue(mount, { onError }) {
 
   async function poll() {
     try {
-      paint(await api.queue());
+      const data = await api.queue();
+      const next = shapeOf(data);
+      if (next !== shape) {
+        shape = next;
+        await rebuild(data);
+      }
+      paint(data);
     } catch (error) {
       stop();
-      onError(error, () => {
-        start();
-      });
+      onError(error, open);
     }
   }
 
@@ -189,14 +204,12 @@ export function queue(mount, { onError }) {
     if (!document.hidden) poll();
   };
 
-  return {
-    open() {
-      shape = '';
-      updaters.clear();
-      summary.textContent = 'Loading queue…';
-      mount.replaceChildren(el('h1', {}, 'Queue'), summary, free, hint, actions, groups, history);
-      start();
-    },
-    close: stop,
-  };
+  function open() {
+    shape = '';
+    summary.textContent = 'Loading queue…';
+    mount.replaceChildren(el('h1', {}, 'Queue'), summary, free, hint, actions, list.node, torrents, history);
+    start();
+  }
+
+  return { open, close: stop };
 }

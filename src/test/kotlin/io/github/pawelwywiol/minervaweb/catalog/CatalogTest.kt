@@ -60,4 +60,21 @@ class CatalogTest {
             assertEquals("Zelda (USA).zip", second.name)
             assertEquals(emptyList(), catalog.browse(platform.id, second.name, second.id, limit = 1))
         }
+
+    @Test
+    fun `search within a system puts english releases first and broken dumps last`() {
+        val nes = "./No-Intro/${TestCatalog.NES}"
+        val extra =
+            listOf("Zelda (Japan).zip", "Zelda (USA) [b].zip", "Zelda (Europe).zip").mapIndexed { i, name ->
+                listOf<Any?>("$nes/$name", "No-Intro/nes.torrent", 10 + i, null)
+            }
+        CatalogReader(TestCatalog.catalog(dir, extra)).use { catalog ->
+            val nesId = catalog.platforms("No-Intro").single().id
+            val names = catalog.search(listOf(nesId), listOf("zelda")).map { it.name }
+            assertEquals(
+                listOf("Zelda (Europe).zip", "Zelda (USA).zip", "Zelda (Japan).zip", "Zelda (USA) [b].zip"),
+                names,
+            )
+        }
+    }
 }

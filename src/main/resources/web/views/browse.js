@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { badge, button, count, el, spinner } from '../dom.js';
+import { badge, button, count, el, loadOnScroll, spinner } from '../dom.js';
 import { games } from './games.js';
 
 /**
@@ -89,6 +89,7 @@ export function browse(mount, { onError }) {
     const status = el('p', { className: 'muted' }, 'Loading…');
     const moreButton = button('Show more', () => loadMore(), 'ghost wide');
     moreButton.hidden = true;
+    loadOnScroll(moreButton);
 
     render(
       crumbs(

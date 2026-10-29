@@ -18,6 +18,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -133,6 +134,32 @@ fun Route.queueRoutes(s: Services) {
         if (roms == null) return@get call.noCatalog()
         val view = RomView(s)
         call.json(buildJsonObject { put("roms", buildJsonArray { roms.forEach { add(romJson(it, view)) } }) })
+    }
+
+    // queued items as catalogue rows, so the queue reuses the search list and its details panel
+    get("/api/queue/roms") {
+        val items =
+            s.queue
+                .byTorrent()
+                .values
+                .flatten()
+        val found = s.catalog.read { reader -> items.map { it to reader.rom(it.collection, it.platformKey, it.name) } }
+        if (found == null) return@get call.noCatalog()
+        val view = RomView(s)
+        call.json(
+            buildJsonObject {
+                put(
+                    "roms",
+                    buildJsonArray {
+                        found.forEach { (item, rom) ->
+                            if (rom != null) {
+                                add(JsonObject(romJson(rom, view) + mapOf("queueId" to JsonPrimitive(item.id))))
+                            }
+                        }
+                    },
+                )
+            },
+        )
     }
 
     post("/api/favourites") {

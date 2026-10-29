@@ -10,9 +10,10 @@ export function getState(rom) {
 
 /**
  * Games beside the details of the one picked. Pressing a row only picks it: downloading and
- * favourites are their own buttons, so a stray press never starts a download.
+ * favourites are their own buttons, so a stray press never starts a download. Given onRemove, the
+ * row's own button removes instead of downloading, which is all the queue needs.
  */
-export function games() {
+export function games({ onRemove } = {}) {
   const rows = new Map();
   const list = el('div', { className: 'games', role: 'list' });
   let selected = null;
@@ -57,28 +58,32 @@ export function games() {
 
   function build(rom) {
     const [title, tags] = splitName(rom.name);
+    const status = el('span', { className: 'status' });
     const pick = el('button', { type: 'button', className: 'pick' }, [
       badge(rom.folder, rom.family),
       el('span', { className: 'title' }, [title, tags ? el('span', { className: 'tags' }, ` ${tags}`) : null]),
-      el('span', { className: 'sub' }, [el('span', {}, rom.platform), el('span', {}, size(rom.size))]),
+      el('span', { className: 'sub' }, [el('span', {}, rom.platform), el('span', {}, size(rom.size)), status]),
     ]);
     pick.addEventListener('click', () => select(rom.id));
 
     const fav = el('button', { type: 'button', className: 'icon-button fav' }, icon('heart'));
     fav.addEventListener('click', () => toggleFavourite(rom));
-    const get = el('button', { type: 'button', className: 'get' });
-    get.addEventListener('click', () => toggleQueue(rom));
+    const get = el('button', { type: 'button', className: 'icon-button get' });
+    get.addEventListener('click', () => (onRemove ? onRemove(rom) : toggleQueue(rom)));
 
     const row = el('div', { className: 'game', role: 'listitem' }, [pick, fav, get]);
     const paint = () => {
-      const state = getState(rom);
+      const state = onRemove ? { icon: 'close', label: 'Remove from the queue' } : getState(rom);
       fav.setAttribute('aria-pressed', String(Boolean(rom.favourite)));
       fav.title = rom.favourite ? 'Remove from favourites' : 'Add to favourites';
       fav.setAttribute('aria-label', fav.title);
-      get.replaceChildren(icon(state.icon), el('span', {}, state.label));
-      get.title = state.hint;
-      get.disabled = Boolean(rom.downloaded && !rom.queued);
+      get.replaceChildren(icon(state.icon));
+      get.title = state.hint || state.label;
+      get.setAttribute('aria-label', `${state.label}: ${rom.name}`);
+      get.disabled = !onRemove && Boolean(rom.downloaded && !rom.queued);
       get.dataset.state = state.icon;
+      status.textContent = rom.status?.text || '';
+      status.className = `status ${rom.status?.kind || ''}`;
     };
     paint();
     rows.set(rom.id, { rom, node: row, paint });
@@ -105,6 +110,12 @@ export function games() {
     },
     append(roms) {
       list.append(...roms.map(build));
+    },
+    patch(id, fields) {
+      const row = rows.get(id);
+      if (!row) return;
+      Object.assign(row.rom, fields);
+      row.paint();
     },
     get size() {
       return rows.size;
