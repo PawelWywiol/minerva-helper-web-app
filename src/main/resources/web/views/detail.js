@@ -1,9 +1,13 @@
 import * as api from '../api.js';
-import { badge, el, icon, similarNote, size, splitName } from '../dom.js';
+import { badge, button, el, getState, icon, loadHidden, similarNote, size, splitName, toast, variant } from '../dom.js';
+
+const FIRST_VERSIONS = 3;
+const MORE_VERSIONS = 5;
 
 /**
- * One game in full beside the list it was picked from: cover, where it lands, checksums. On a
- * phone the same panel slides over the list and closes back into it.
+ * One game in full beside the list it was picked from: cover, where it lands, checksums, and on a
+ * second tab the other files of the same game (regions, revisions) to pick instead. On a phone the
+ * same panel slides over the list and closes back into it.
  */
 export function detail({ toggleQueue, toggleFavourite, onClose }) {
   const node = el('aside', { className: 'detail', ariaLabel: 'Game details' });
@@ -11,6 +15,8 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
   let full = null;
   let failed = null;
   let generation = 0;
+  let tab = 'details';
+  let others = null;
 
   const fact = (key, value) => [el('dt', {}, key), el('dd', {}, value)];
 
@@ -78,21 +84,123 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
         ? el('p', { className: 'similar' }, `${similarNote(rom)}: check before downloading this one too.`)
         : null,
       el('div', { className: 'actions' }, [get, fav]),
-      el('dl', { className: 'facts' }, [
-        ...fact('Size', size(rom.size)),
-        ...fact('Collection', rom.collection),
-        ...fact('Torrent', full ? full.torrentPath.split('/').pop() : '…'),
-        ...fact('MD5', full ? full.md5 || 'not listed' : '…'),
-        ...fact('SHA-1', full ? full.sha1 || 'not listed' : '…'),
-      ]),
+      tabs(),
+      tab === 'details'
+        ? el('dl', { className: 'facts', role: 'tabpanel' }, [
+            ...fact('Size', size(rom.size)),
+            ...fact('Collection', rom.collection),
+            ...fact('Torrent', full ? full.torrentPath.split('/').pop() : '…'),
+            ...fact('MD5', full ? full.md5 || 'not listed' : '…'),
+            ...fact('SHA-1', full ? full.sha1 || 'not listed' : '…'),
+          ])
+        : versionsPanel(),
     ];
+    // a repaint after "More versions" must not throw the reader back to the top of the list
+    const scrolled = node.querySelector('.versions')?.scrollTop ?? 0;
     node.replaceChildren(...parts.filter(Boolean));
+    const versions = node.querySelector('.versions');
+    if (versions) versions.scrollTop = scrolled;
+  }
+
+  function tabs() {
+    const label = others?.loaded ? `Other versions (${others.roms.length}${others.more ? '+' : ''})` : 'Other versions';
+    return el(
+      'div',
+      { className: 'tabs', role: 'tablist' },
+      [
+        ['details', 'Details'],
+        ['versions', label],
+      ].map(([key, text]) => {
+        const node = button(
+          text,
+          () => {
+            tab = key;
+            paint();
+            if (key === 'versions' && !others) loadVersions();
+          },
+          'tab',
+        );
+        node.setAttribute('role', 'tab');
+        node.setAttribute('aria-selected', String(tab === key));
+        return node;
+      }),
+    );
+  }
+
+  async function loadVersions() {
+    const rom = current;
+    const mine = generation;
+    others ??= { roms: [], more: false, loaded: false, loading: false };
+    others.loading = true;
+    paint();
+    try {
+      const page = await api.versions(rom.id, {
+        offset: others.roms.length,
+        limit: others.loaded ? MORE_VERSIONS : FIRST_VERSIONS,
+        hide: [...loadHidden()],
+      });
+      if (mine !== generation) return;
+      others.roms.push(...page.roms);
+      others.more = page.more;
+      others.loaded = true;
+    } catch (error) {
+      if (mine !== generation) return;
+      toast(`Could not load other versions: ${error.message}`);
+    }
+    others.loading = false;
+    paint();
+  }
+
+  function versionRow(version) {
+    const [title, tags] = splitName(version.name);
+    const state = getState(version);
+    const open = button(
+      [
+        el('span', { className: 'title' }, [title, tags ? el('span', { className: 'tags' }, ` ${tags}`) : null]),
+        el('span', { className: 'sub' }, [
+          el('span', {}, size(version.size)),
+          el('span', {}, version.collection),
+          variant(version) ? el('span', {}, variant(version)) : null,
+          version.downloaded ? el('span', { className: 'ok' }, 'In library') : null,
+        ]),
+      ],
+      () => show(version),
+      'pick',
+    );
+    open.title = 'Show this version';
+    const get = button(
+      icon(state.icon),
+      async () => {
+        await toggleQueue(version);
+        paint();
+      },
+      'icon-button get',
+    );
+    get.dataset.state = state.icon;
+    get.title = state.hint;
+    get.setAttribute('aria-label', `${state.label}: ${version.name}`);
+    get.disabled = Boolean(version.downloaded && !version.queued);
+    return el('div', { className: 'version' }, [open, get]);
+  }
+
+  function versionsPanel() {
+    if (!others?.loaded) return el('p', { className: 'muted', role: 'tabpanel' }, 'Looking for other versions…');
+    if (others.roms.length === 0) {
+      return el('p', { className: 'muted', role: 'tabpanel' }, 'No other version of this game in this system.');
+    }
+    const more = others.more
+      ? button(others.loading ? 'Loading…' : 'More versions', () => loadVersions(), 'link more-versions')
+      : null;
+    if (more) more.disabled = others.loading;
+    return el('div', { className: 'versions', role: 'tabpanel' }, [...others.roms.map(versionRow), more]);
   }
 
   async function show(rom) {
     current = rom;
     full = null;
     failed = null;
+    tab = 'details';
+    others = null;
     const mine = ++generation;
     paint();
     node.scrollTop = 0;

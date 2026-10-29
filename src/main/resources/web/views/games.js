@@ -1,12 +1,6 @@
 import * as api from '../api.js';
-import { badge, button, el, highlight, icon, similarNote, size, splitName, toast } from '../dom.js';
+import { badge, button, el, getState, highlight, icon, similarNote, size, splitName, toast, variant } from '../dom.js';
 import { detail } from './detail.js';
-
-export function getState(rom) {
-  if (rom.queued) return { icon: 'clock', label: 'Queued', hint: 'Remove from the queue' };
-  if (rom.downloaded) return { icon: 'check', label: 'In library', hint: 'Already in your library' };
-  return { icon: 'download', label: 'Download', hint: `Download to roms/${rom.folder}` };
-}
 
 /**
  * Games beside the details of the one picked. Pressing a row only picks it: downloading and
@@ -68,7 +62,13 @@ export function games({ onRemove } = {}) {
         highlight(title, rom.match),
         tags ? el('span', { className: 'tags' }, highlight(` ${tags}`, rom.match)) : null,
       ]),
-      el('span', { className: 'sub' }, [el('span', {}, rom.platform), el('span', {}, size(rom.size)), similar, status]),
+      el('span', { className: 'sub' }, [
+        el('span', {}, rom.platform),
+        el('span', {}, size(rom.size)),
+        variant(rom) ? el('span', {}, variant(rom)) : null,
+        similar,
+        status,
+      ]),
     ]);
     pick.addEventListener('click', () => select(keyOf(rom)));
 

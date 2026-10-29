@@ -710,6 +710,81 @@ button.get[data-state='check'] {
   min-height: 42px;
 }
 
+.detail .tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 18px;
+  border-bottom: 1px solid var(--line);
+}
+button.tab {
+  min-height: 38px;
+  padding: 0 12px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  border-radius: 8px 8px 0 0;
+  font-size: 0.9rem;
+}
+button.tab:hover {
+  color: var(--text);
+}
+button.tab[aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.detail .tabs + .facts {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: 0;
+}
+.detail .tabs + p {
+  margin-top: 12px;
+}
+
+/* kept short: the panel's own actions must stay in reach above it */
+.versions {
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 280px;
+  margin-top: 10px;
+  overscroll-behavior: contain;
+}
+.version {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  border-radius: 10px;
+}
+.version:hover {
+  background: var(--raised);
+}
+.version .pick {
+  display: grid;
+  gap: 2px;
+  justify-content: stretch;
+  justify-items: start;
+  min-height: 48px;
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: 400;
+}
+.version .title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.version .tags {
+  color: var(--muted);
+  font-weight: 400;
+}
+.version .sub {
+  display: flex;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .facts {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

@@ -149,6 +149,31 @@ class CatalogRoutesTest {
         }
 
     @Test
+    fun `other versions of a game come from the same folder, best first`() =
+        app(
+            extra =
+                listOf("Zelda (Japan).zip", "Zelda (Europe).zip", "Zelda II (USA).zip").mapIndexed { i, name ->
+                    listOf("./No-Intro/${TestCatalog.NES}/$name", "No-Intro/nes.torrent", 50 + i, null)
+                },
+        ) { services ->
+            val usa =
+                services.catalog
+                    .read {
+                        listOfNotNull(
+                            it.rom("No-Intro", TestCatalog.NES, "Zelda (USA).zip"),
+                        )
+                    }!!
+                    .single()
+
+            suspend fun versions(query: String) =
+                json(
+                    "/api/roms/${usa.id}/versions$query",
+                )["roms"]!!.jsonArray.map { it.jsonObject["name"]?.jsonPrimitive?.content }
+            assertEquals(listOf("Zelda (Europe).zip", "Zelda (Japan).zip"), versions(""))
+            assertEquals(listOf("Zelda (Europe).zip"), versions("?hide=japan"))
+        }
+
+    @Test
     fun `missing catalog answers 503`() =
         app(withCatalog = false) {
             assertEquals("missing", json("/api/catalog")["state"]?.jsonPrimitive?.content)
