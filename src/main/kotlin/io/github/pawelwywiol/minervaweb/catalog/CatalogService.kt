@@ -29,6 +29,7 @@ class CatalogService(
     @Synchronized
     fun start(force: Boolean): Boolean {
         if (job?.isActive == true) return false
+        status = Status(State.DOWNLOADING)
         job =
             scope.launch {
                 try {
