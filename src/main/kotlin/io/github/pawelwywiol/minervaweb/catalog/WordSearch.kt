@@ -43,6 +43,16 @@ fun words(text: String): List<String> =
         .split(SEPARATORS)
         .filter { it.isNotEmpty() }
 
+// what a name is a version of: "Super Mario Bros. 3 (Europe).zip" and "Super Mario Bros. 3 (1988)(Nintendo)(US).zip"
+// both read "super mario bros 3"
+fun titleOf(name: String): String =
+    words(
+        name
+            .replace(EXTENSION, "")
+            .substringBefore(" (")
+            .substringBefore(" ["),
+    ).joinToString(" ")
+
 // repeats and filler words do not decide a match, unless filler is all there is
 fun queryWords(words: List<String>): List<String> =
     words.distinct().filterNot { it in STOPWORDS }.ifEmpty { words.distinct() }
@@ -73,7 +83,7 @@ class WordMatch(
         val title = words(base.substringBefore(" (").substringBefore(" ["))
         return Score(
             shared = shared.size,
-            extra = title.count { token -> terms.none { matches(token, it) } },
+            extra = title.count { token -> token !in STOPWORDS && terms.none { matches(token, it) } },
             unwanted = UNWANTED_TAGS.any { it in name },
             preferred = PREFERRED_TAGS.any { it in name },
             curated = rom.collection in CURATED,
@@ -90,8 +100,8 @@ class WordMatch(
     companion object {
         val ORDER: Comparator<Pair<CatalogReader.Rom, Score>> =
             compareByDescending<Pair<CatalogReader.Rom, Score>> { it.second.shared }
-                .thenBy { it.second.extra }
                 .thenBy { it.second.unwanted }
+                .thenBy { it.second.extra }
                 .thenByDescending { it.second.preferred }
                 .thenByDescending { it.second.curated }
                 .thenBy { it.first.name }

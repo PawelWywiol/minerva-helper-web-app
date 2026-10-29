@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { button, confirmable, count, el, size, toast } from '../dom.js';
+import { button, count, el, size, toast } from '../dom.js';
 import { games } from './games.js';
 
 /**
@@ -24,13 +24,17 @@ export function queue(mount, { onError }) {
   let timer = null;
   let shape = '';
   const updaters = new Map();
-  const romOf = new Map();
-
+  // a downloaded row forgets the record only; its file stays in the library
   const list = games({
     onRemove: async (rom) => {
       try {
-        await api.removeQueued(rom.queueId);
-        toast('Removed from the queue');
+        if (rom.downloadedId) {
+          await api.forgetDownloaded(rom.downloadedId);
+          toast(`Forgotten. The file stays in roms/${rom.folder}`);
+        } else {
+          await api.removeQueued(rom.queueId);
+          toast('Removed from the queue');
+        }
         await poll();
       } catch (error) {
         toast(`Could not change the queue: ${error.message}`);
@@ -45,7 +49,6 @@ export function queue(mount, { onError }) {
   const retryButton = button('Retry failed', () => act(() => api.retryFailed()), 'ghost');
   const actions = el('div', { className: 'actions' }, [runButton, retryButton]);
   const torrents = el('div');
-  const history = el('div');
 
   let running = false;
 
@@ -89,27 +92,6 @@ export function queue(mount, { onError }) {
     ]);
   }
 
-  function buildHistory(data) {
-    if (data.downloadedTotal === 0) return [];
-    const rows = data.downloaded.map((done) =>
-      el('div', { className: 'row' }, [
-        el('span', { className: 'name' }, done.name),
-        el('span', { className: 'meta' }, done.folder ? `${size(done.size)} in roms/${done.folder}` : size(done.size)),
-        el(
-          'span',
-          { className: 'buttons' },
-          confirmable('Forget', 'Forget?', () => act(() => api.forgetDownloaded(done.id))),
-        ),
-      ]),
-    );
-    const rest = data.downloadedTotal - data.downloaded.length;
-    return [
-      el('h2', {}, 'Downloaded'),
-      el('div', { className: 'list' }, rows),
-      rest > 0 ? el('p', { className: 'muted' }, `…and ${count(rest)} more, all marked in the lists`) : null,
-    ].filter(Boolean);
-  }
-
   const shapeOf = (data) =>
     [
       data.groups.map((g) => `${g.torrentPath}=${g.items.map((i) => i.id).join(',')}`).join('|'),
@@ -130,11 +112,23 @@ export function queue(mount, { onError }) {
           ]
         : []),
     );
-    history.replaceChildren(...buildHistory(data));
-    const { roms } = await api.queueRoms();
-    romOf.clear();
-    for (const rom of roms) romOf.set(rom.queueId, rom.id);
-    list.set(roms);
+    const { roms, downloaded } = await api.queueRoms();
+    list.set([]);
+    if (roms.length > 0) {
+      list.appendGroup(
+        'In the queue',
+        '',
+        roms.map((rom) => ({ ...rom, key: `q${rom.queueId}` })),
+      );
+    }
+    if (downloaded.length > 0) {
+      const rest = data.downloadedTotal - downloaded.length;
+      list.appendGroup(
+        'Recently downloaded',
+        rest > 0 ? `${count(rest)} more are marked in the lists` : '',
+        downloaded.map((rom) => ({ ...rom, key: `d${rom.downloadedId}`, removeLabel: 'Forget, keep the file' })),
+      );
+    }
   }
 
   function paint(data) {
@@ -144,7 +138,7 @@ export function queue(mount, { onError }) {
         const state = STATES[item.state] || STATES.queued;
         const percent = item.state === 'downloading' && group.active ? ` ${group.active.percent}%` : '';
         const text = item.error ? `${state.text}: ${item.error}` : state.text + percent;
-        list.patch(romOf.get(item.id), { status: { text, kind: state.kind } });
+        list.patch(`q${item.id}`, { status: { text, kind: state.kind } });
       });
     });
 
@@ -207,7 +201,7 @@ export function queue(mount, { onError }) {
   function open() {
     shape = '';
     summary.textContent = 'Loading queue…';
-    mount.replaceChildren(el('h1', {}, 'Queue'), summary, free, hint, actions, list.node, torrents, history);
+    mount.replaceChildren(el('h1', {}, 'Queue'), summary, free, hint, actions, list.node, torrents);
     start();
   }
 

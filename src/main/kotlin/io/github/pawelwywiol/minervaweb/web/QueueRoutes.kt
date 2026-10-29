@@ -1,5 +1,6 @@
 package io.github.pawelwywiol.minervaweb.web
 
+import io.github.pawelwywiol.minervaweb.catalog.CatalogReader
 import io.github.pawelwywiol.minervaweb.catalog.CatalogService
 import io.github.pawelwywiol.minervaweb.download.DownloadRunner
 import io.github.pawelwywiol.minervaweb.metadata.GameInfoLookup
@@ -140,28 +141,34 @@ fun Route.queueRoutes(s: Services) {
         call.json(buildJsonObject { put("roms", buildJsonArray { roms.forEach { add(romJson(it, view)) } }) })
     }
 
-    // queued items as catalogue rows, so the queue reuses the search list and its details panel
+    // queued and recently downloaded games as catalogue rows, so the queue reuses the search list and its details
     get("/api/queue/roms") {
         val items =
             s.queue
                 .byTorrent()
                 .values
                 .flatten()
-        val found = s.catalog.read { reader -> items.map { it to reader.rom(it.collection, it.platformKey, it.name) } }
+        val done = s.queue.downloaded().take(RECENT_DOWNLOADS)
+        val found =
+            s.catalog.read { reader ->
+                items.map { it.id to reader.rom(it.collection, it.platformKey, it.name) } to
+                    done.map { it.id to reader.rom(it.collection, it.platformKey, it.name) }
+            }
         if (found == null) return@get call.noCatalog()
         val view = RomView(s)
+
+        fun rows(
+            pairs: List<Pair<Long, CatalogReader.Rom?>>,
+            idKey: String,
+        ) = buildJsonArray {
+            pairs.forEach { (id, rom) ->
+                if (rom != null) add(JsonObject(romJson(rom, view) + mapOf(idKey to JsonPrimitive(id))))
+            }
+        }
         call.json(
             buildJsonObject {
-                put(
-                    "roms",
-                    buildJsonArray {
-                        found.forEach { (item, rom) ->
-                            if (rom != null) {
-                                add(JsonObject(romJson(rom, view) + mapOf("queueId" to JsonPrimitive(item.id))))
-                            }
-                        }
-                    },
-                )
+                put("roms", rows(found.first, "queueId"))
+                put("downloaded", rows(found.second, "downloadedId"))
             },
         )
     }

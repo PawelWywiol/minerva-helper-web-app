@@ -120,6 +120,7 @@ class CatalogReader(
         platformIds: List<Long>? = null,
         limit: Int = DEFAULT_PAGE,
         offset: Int = 0,
+        hiddenRegions: Set<String> = emptySet(),
     ): List<Rom> {
         if (terms.isEmpty()) return emptyList()
         val match = WordMatch(terms, prefix)
@@ -131,7 +132,7 @@ class CatalogReader(
             listOf(expression),
             MAX_CANDIDATES,
         ).map { it to match.score(it) }
-            .filter { it.second.shared > 0 }
+            .filter { it.second.shared > 0 && Regions.visible(it.first.name, hiddenRegions) }
             .sortedWith(WordMatch.ORDER)
             .drop(offset)
             .take(limit)
@@ -180,13 +181,16 @@ class CatalogReader(
         platformIds: List<Long>,
         limit: Int = DEFAULT_PAGE,
         offset: Int = 0,
+        hiddenRegions: Set<String> = emptySet(),
     ): List<Rom> =
         if (platformIds.isEmpty()) {
             emptyList()
         } else {
             roms(
                 "FROM file f",
-                "f.platform_id IN (${platformIds.joinToString(",")}) ORDER BY f.name, f.id",
+                "f.platform_id IN (${platformIds.joinToString(
+                    ",",
+                )})${Regions.sql(hiddenRegions)} ORDER BY f.name, f.id",
                 emptyList(),
                 limit,
                 offset,

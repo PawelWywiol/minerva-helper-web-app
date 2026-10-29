@@ -75,6 +75,12 @@ export function highlight(text, match) {
   });
 }
 
+/** Another version of the same game, in the same folder, is already kept or on its way. */
+export function similarNote(rom) {
+  if (rom.downloaded || rom.queued || !rom.similar) return '';
+  return rom.similar === 'library' ? 'Another version in library' : 'Another version queued';
+}
+
 export const count = (value) => new Intl.NumberFormat().format(value);
 
 /** Matches the app's own formatSize: decimal units, one decimal place. */
@@ -96,24 +102,6 @@ export const spinner = (label = 'Loading…') => el('p', { className: 'muted' },
 /** The ES-DE folder a game lands in, coloured by maker so a mixed list reads at a glance. */
 export const badge = (folder, family = 'other') =>
   el('span', { className: `badge f-${family}`, title: `Lands in roms/${folder}` }, folder);
-
-/** A destructive button arms itself first: nothing here is undoable by pressing again. */
-export function confirmable(label, armedLabel, onConfirm) {
-  const node = el('button', { type: 'button', className: 'ghost small' }, label);
-  node.addEventListener('click', () => {
-    if (node.dataset.armed) {
-      onConfirm();
-      return;
-    }
-    node.dataset.armed = '1';
-    node.textContent = armedLabel;
-    setTimeout(() => {
-      delete node.dataset.armed;
-      node.textContent = label;
-    }, 4000);
-  });
-  return node;
-}
 
 const SCROLL_KEY = 'minerva.infiniteScroll';
 
