@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.ktor.server.cio)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.sqlite.jdbc)
+    implementation(libs.kotlinx.serialization.json)
     runtimeOnly(libs.slf4j.simple)
 
     testImplementation(kotlin("test"))

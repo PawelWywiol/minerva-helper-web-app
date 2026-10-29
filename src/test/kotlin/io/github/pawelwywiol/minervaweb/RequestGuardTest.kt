@@ -16,7 +16,7 @@ class RequestGuardTest {
     private fun guarded(block: suspend io.ktor.server.testing.ApplicationTestBuilder.() -> Unit) =
         testApplication {
             application {
-                module(allowedHosts = setOf("retro.lan"))
+                base(allowedHosts = setOf("retro.lan"))
                 routing { post("/api/echo") { call.respond(HttpStatusCode.OK) } }
             }
             block()
