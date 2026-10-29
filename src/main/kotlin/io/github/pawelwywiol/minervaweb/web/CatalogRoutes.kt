@@ -18,6 +18,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -137,7 +138,7 @@ fun Route.catalogRoutes(s: Services) {
         call.withCatalog(catalog) { romsJson(it.browse(platformId, afterName, afterId, limit), limit, RomView(s)) }
     }
 
-    // FTS returns rows by relevance with no key to seek to, so search pages by offset
+    // ranked results have no key to seek to, so search pages by offset
     get("/api/search") {
         val query = call.request.queryParameters["q"].orEmpty()
         val limit = call.pageSize()
@@ -149,14 +150,18 @@ fun Route.catalogRoutes(s: Services) {
         call.withCatalog(catalog) { reader ->
             val parsed = matcher.parse(reader.platforms(), query, anywhere)
             val system = parsed.system
+            // a query still being typed ends mid-word, so its last word may be the start of one
+            val prefix = query.lastOrNull()?.isLetterOrDigit() == true
             val roms =
-                when {
-                    system != null -> reader.search(system.platformIds, parsed.terms, limit, offset)
-                    query.isBlank() -> emptyList()
-                    else -> reader.search(query, limit, offset)
+                if (system != null && parsed.terms.isEmpty()) {
+                    reader.list(system.platformIds, limit, offset)
+                } else {
+                    reader.rank(parsed.terms, prefix, system?.platformIds, limit, offset)
                 }
             buildJsonObject {
                 putRoms(roms, limit, RomView(s))
+                put("terms", buildJsonArray { parsed.terms.forEach { add(JsonPrimitive(it)) } })
+                put("prefix", prefix)
                 put("system", system?.let { buildJsonObject { putSystem(it) } } ?: JsonNull)
                 put("systems", buildJsonArray { parsed.suggestions.forEach { add(buildJsonObject { putSystem(it) }) } })
             }

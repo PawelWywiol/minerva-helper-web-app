@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { el, infiniteScroll, spinner } from '../dom.js';
+import { button, el, icon, infiniteScroll, spinner } from '../dom.js';
 
 /**
  * Download settings and the folder each platform lands in, inside the library mounted into the container.
@@ -34,6 +34,40 @@ export function settings(mount, { onError }) {
         return button;
       }),
     );
+  }
+
+  // kept outside paint, so a settings change does not wipe the last check
+  const vpnResult = el('div', { className: 'vpn', role: 'status' });
+  const vpnButton = button('Check VPN', () => checkVpn(), 'ghost');
+
+  async function checkVpn() {
+    vpnButton.disabled = true;
+    vpnResult.replaceChildren(el('p', { className: 'muted' }, 'Asking the VPN container…'));
+    try {
+      const v = await api.vpn();
+      const place = [v.city, v.region, v.country].filter(Boolean).filter((x, i, all) => all.indexOf(x) === i);
+      const fact = (key, value) => (value ? [el('dt', {}, key), el('dd', {}, value)] : []);
+      const up = v.reachable && v.status === 'running';
+      vpnResult.replaceChildren(
+        el('p', { className: up ? 'ok' : 'warn' }, [
+          up ? icon('check') : null,
+          up
+            ? 'Downloads go through the VPN.'
+            : v.reachable
+              ? `The VPN is ${v.status || 'not running'}. Downloads are blocked until it reconnects.`
+              : 'No VPN found. This container does not run behind gluetun, so downloads would use your own connection.',
+        ]),
+        el('dl', { className: 'facts' }, [
+          ...fact('Public address', v.public_ip),
+          ...fact('Location', place.join(', ')),
+          ...fact('Provider', v.organization),
+        ]),
+      );
+    } catch (error) {
+      vpnResult.replaceChildren(el('p', { className: 'error' }, `The check failed: ${error.message}`));
+    } finally {
+      vpnButton.disabled = false;
+    }
   }
 
   function scrolling() {
@@ -140,6 +174,10 @@ export function settings(mount, { onError }) {
         { className: 'muted' },
         'Downloads land in the library, one folder per platform (ES-DE names by default).',
       ),
+      el('h2', {}, 'VPN'),
+      el('p', { className: 'muted' }, 'See the address and place the archive sees when this app downloads.'),
+      el('div', { className: 'actions' }, vpnButton),
+      vpnResult,
       el('h2', {}, 'Downloads at once'),
       el('p', { className: 'muted' }, 'More is not always faster — each torrent has to find its own sharers.'),
       concurrency(data),

@@ -56,3 +56,6 @@ internal object TestCatalog {
         return target
     }
 }
+
+internal fun CatalogReader.find(query: String): List<CatalogReader.Rom> =
+    rank(queryWords(words(query)), query.lastOrNull()?.isLetterOrDigit() == true)

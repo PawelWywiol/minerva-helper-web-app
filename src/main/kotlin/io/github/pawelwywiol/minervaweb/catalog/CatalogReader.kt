@@ -7,30 +7,9 @@ import kotlin.io.path.absolutePathString
 
 private const val DEFAULT_PAGE = 50
 
-// No-Intro and TOSEC release tags: English-speaking or Polish releases first, broken or unfinished dumps last
-private val PREFERRED_TAGS =
-    listOf("(USA", "(Europe", "(World", "(US)", "(EU)", "(GB)", "(PL)", "(En", ",En", "(Pl", ",Pl")
-private val UNWANTED_TAGS =
-    listOf(
-        "[b",
-        "[h",
-        "[a",
-        "[t",
-        "[f",
-        "[cr",
-        "[o",
-        "[p",
-        "[m",
-        "[u",
-        "(Beta",
-        "(Proto",
-        "(Demo",
-        "(Sample",
-        "(Pirate",
-        "(Hack",
-    )
-
-private fun likeAny(tags: List<String>) = tags.joinToString(" OR ", "(", ")") { "instr(f.name, '$it') > 0" }
+// candidates come from the rarest words: common ones ("super", "2") would pull in a third of the archive
+private const val CANDIDATE_BUDGET = 50_000L
+private const val MAX_CANDIDATES = 150_000
 
 class CatalogReader(
     file: Path,
@@ -130,41 +109,89 @@ class CatalogReader(
 
     fun count(): Long = query("SELECT count(*) FROM file") { getLong(1) }.first()
 
-    fun search(
-        query: String,
+    /**
+     * Files sharing the most words with the query, best first; files sharing none are left out. The
+     * index only gathers candidates, holding any of the query's rarer words, and [WordMatch] ranks
+     * them. FTS goes first (CROSS JOIN): checking MATCH row by row inside a platform takes seconds.
+     */
+    fun rank(
+        terms: List<String>,
+        prefix: Boolean,
+        platformIds: List<Long>? = null,
         limit: Int = DEFAULT_PAGE,
         offset: Int = 0,
     ): List<Rom> {
-        val match = toMatchExpression(query) ?: return emptyList()
-        val fts = "FROM file_fts j JOIN file f ON f.id = j.rowid"
-        val hits = roms(fts, "j.name MATCH ?", listOf(match), limit, offset)
-        // names are not always split into words: "zoom amiga" must also find "ZoomAmiga"
-        val joined = toJoinedMatchExpression(query)
-        if (joined == null || hits.size >= limit) return hits
-        val seen = hits.mapTo(HashSet()) { it.id }
-        val extra = roms(fts, "j.name MATCH ?", listOf(joined), limit - hits.size)
-        return hits + extra.filterNot { it.id in seen }
+        if (terms.isEmpty()) return emptyList()
+        val match = WordMatch(terms, prefix)
+        val expression = candidates(terms, match) ?: return emptyList()
+        val filter = platformIds?.let { " AND f.platform_id IN (${it.joinToString(",")})" }.orEmpty()
+        return roms(
+            "FROM file_fts j CROSS JOIN file f ON f.id = j.rowid",
+            "j.name MATCH ?$filter",
+            listOf(expression),
+            MAX_CANDIDATES,
+        ).map { it to match.score(it) }
+            .filter { it.second.shared > 0 }
+            .sortedWith(WordMatch.ORDER)
+            .drop(offset)
+            .take(limit)
+            .map { it.first }
     }
 
-    // FTS joined back to a platform filter walks every hit of the term; a scan of one system's rows is instant
-    fun search(
-        platformIds: List<Long>,
+    // FTS4 operators are neutralised: terms are bare letters and digits, joined with OR only
+    private fun candidates(
         terms: List<String>,
+        match: WordMatch,
+    ): String? {
+        val options = terms.map { if (match.isPrefix(it)) "$it*" else it } + terms.zipWithNext { a, b -> a + b }
+        val counted = options.map { it to documents(it) }.filter { it.second > 0 }.sortedBy { it.second }
+        if (counted.isEmpty()) return null
+        val picked = mutableListOf(counted.first().first)
+        var total = counted.first().second
+        for ((option, documents) in counted.drop(1)) {
+            if (total + documents > CANDIDATE_BUDGET) break
+            picked += option
+            total += documents
+        }
+        return picked.joinToString(" OR ")
+    }
+
+    // how many files hold a word, straight from the index; a temp table works on the read-only file
+    private val termsTable: String by lazy {
+        db.createStatement().use {
+            it.execute(
+                "CREATE VIRTUAL TABLE IF NOT EXISTS temp.terms USING fts4aux(main, file_fts)",
+            )
+        }
+        "temp.terms"
+    }
+
+    private fun documents(option: String): Long {
+        val word = option.removeSuffix("*")
+        val sql = "SELECT coalesce(sum(documents), 0) FROM $termsTable WHERE col = '*' AND "
+        return if (option.endsWith("*")) {
+            query(sql + "term >= ? AND term < ?", word, word + Char.MAX_VALUE) { getLong(1) }.first()
+        } else {
+            query(sql + "term = ?", word) { getLong(1) }.first()
+        }
+    }
+
+    fun list(
+        platformIds: List<Long>,
         limit: Int = DEFAULT_PAGE,
         offset: Int = 0,
-    ): List<Rom> {
-        if (platformIds.isEmpty()) return emptyList()
-        val where =
-            "f.platform_id IN (${platformIds.joinToString(",")})" + terms.joinToString("") { " AND f.name LIKE ?" }
-        val order =
-            if (terms.isEmpty()) {
-                " ORDER BY f.name, f.id"
-            } else {
-                " ORDER BY f.name LIKE ? DESC, ${likeAny(UNWANTED_TAGS)}, ${likeAny(PREFERRED_TAGS)} DESC, f.name, f.id"
-            }
-        val args = terms.map { "%$it%" } + terms.take(1).map { "$it%" }
-        return roms("FROM file f", where + order, args, limit, offset)
-    }
+    ): List<Rom> =
+        if (platformIds.isEmpty()) {
+            emptyList()
+        } else {
+            roms(
+                "FROM file f",
+                "f.platform_id IN (${platformIds.joinToString(",")}) ORDER BY f.name, f.id",
+                emptyList(),
+                limit,
+                offset,
+            )
+        }
 
     private fun roms(
         from: String,
@@ -204,19 +231,3 @@ class CatalogReader(
 
     override fun close() = db.close()
 }
-
-// FTS4 operators are neutralised: only bare lowercase terms, unquoted, last one as prefix
-private fun toMatchExpression(query: String): String? {
-    val terms = searchTerms(query)
-    if (terms.isEmpty()) return null
-    return terms.mapIndexed { index, term -> if (index == terms.lastIndex) "$term*" else term }.joinToString(" ")
-}
-
-private fun toJoinedMatchExpression(query: String): String? {
-    val terms = searchTerms(query)
-    if (terms.size < 2) return null
-    return terms.joinToString("") + "*"
-}
-
-internal fun searchTerms(query: String): List<String> =
-    query.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }

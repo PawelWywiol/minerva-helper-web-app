@@ -98,7 +98,7 @@ class CatalogRoutesTest {
             assertEquals(listOf("Super Mario Bros. (World).zip"), names("mario+nes"))
             assertEquals(listOf("Super Mario Bros. (World).zip", "Zelda (USA).zip"), names("nes"))
             assertEquals(listOf("ZoomAmiga (Europe).zip"), names("amiga+cd32"))
-            assertEquals(emptyList(), names("nes+mario&anywhere=true"))
+            assertEquals(listOf("Super Mario Bros. (World).zip"), names("nes+mario&anywhere=true"))
         }
 
     @Test

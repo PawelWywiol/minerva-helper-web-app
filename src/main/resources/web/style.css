@@ -498,6 +498,53 @@ button.chip:hover {
   color: var(--danger);
 }
 
+mark {
+  padding: 0 1px;
+  color: inherit;
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  border-radius: 3px;
+}
+
+.group-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  margin-top: 18px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.group-title:first-child {
+  margin-top: 0;
+}
+.group-title span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.group-title.none span {
+  color: var(--wait);
+}
+
+.listbox {
+  max-width: none;
+}
+.listbox textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 12px 14px;
+  color: var(--text);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.vpn .facts {
+  max-width: 560px;
+  margin-top: 8px;
+}
+
 button.fav[aria-pressed='true'] {
   color: var(--danger);
 }

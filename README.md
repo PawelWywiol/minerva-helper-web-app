@@ -2,8 +2,9 @@
 
 Browser-driven counterpart of [Minerva Helper](https://github.com/PawelWywiol/minervahelper) for Linux, shipped as a Docker image. It finds retro games in the public MiNERVA archive and downloads **only the files you pick**, verifies them and files them into an [ES-DE](https://es-de.org) style library.
 
-- search 2.4 million files by name, system or both (`nes mario`, `amiga cd32`), browse by collection and platform, game details beside the list, favourites
-- download queue: order by torrent, pause single games or whole torrents, retry failed ones
+- search 2.4 million files by name, system or both (`nes mario`, `amiga cd32`), ranked by shared words in any order, or paste a whole list; browse by collection and platform, game details beside the list, favourites
+- check from Settings that downloads leave through the VPN (needs gluetun's `GET /v1/vpn/status` and `GET /v1/publicip/ip` routes, see `VPN_CONTROL_URL`)
+- download queue: order by torrent, pause whole torrents, retry failed ones
 - only the picked file is fetched out of a torrent; nothing is ever uploaded (no incoming connections, no unchoking, torrents removed after each download, zero uploaded bytes checked)
 - every file is verified against the archive's checksum; disc images are unpacked, cartridge zips are kept
 - per-platform folders, ES-DE names by default; a game already in its folder is recognised instead of fetched again
@@ -29,6 +30,7 @@ Open `http://<host-ip>:8090`.
 | --------------- | ------- | ------------------------------------------------------------- |
 | `PORT`          | `8080`  | port inside the container                                     |
 | `ALLOWED_HOSTS` | empty   | comma-separated hostnames allowed besides IPs and `localhost` |
+| `VPN_CONTROL_URL` | `http://127.0.0.1:8000` | gluetun control server, asked by the VPN check in Settings |
 
 | Volume     | Content                                   |
 | ---------- | ----------------------------------------- |

@@ -10,6 +10,7 @@ import io.github.pawelwywiol.minervaweb.placement.FilePlacement
 import io.github.pawelwywiol.minervaweb.platform.Systems
 import io.github.pawelwywiol.minervaweb.queue.DownloadQueue
 import io.github.pawelwywiol.minervaweb.settings.Settings
+import io.github.pawelwywiol.minervaweb.vpn.VpnCheck
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import java.net.URI
@@ -42,6 +43,7 @@ internal fun testServices(dir: Path): Services {
         placement = placement,
         systems = Systems(),
         gameInfo = GameInfoLookup(dir.resolve("gameinfo"), http, UNREACHABLE, UNREACHABLE),
+        vpn = VpnCheck(http, UNREACHABLE),
         version = "test",
     )
 }

@@ -2,6 +2,7 @@ package io.github.pawelwywiol.minervaweb.web
 
 import io.github.pawelwywiol.minervaweb.MUTATION_HEADER
 import io.github.pawelwywiol.minervaweb.catalog.TestCatalog
+import io.github.pawelwywiol.minervaweb.catalog.find
 import io.github.pawelwywiol.minervaweb.module
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -121,7 +122,7 @@ class WebRoutesTest {
     @Test
     fun `changing a folder can move downloaded files`() =
         app { services ->
-            val rom = services.catalog.read { it.search("zelda").single() }!!
+            val rom = services.catalog.read { it.find("zelda").single() }!!
             services.queue.recordDownloaded(rom, "nes")
             val folder = Files.createDirectories(dir.resolve("library/roms/nes"))
             Files.write(folder.resolve(rom.name), ByteArray(1))

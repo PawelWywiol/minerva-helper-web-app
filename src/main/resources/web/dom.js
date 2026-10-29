@@ -7,7 +7,7 @@ export function el(tag, props = {}, children = []) {
     else if (key === 'role' || key.startsWith('aria')) node.setAttribute(attribute(key), value);
     else node[key] = value;
   }
-  for (const child of [].concat(children)) {
+  for (const child of [children].flat(Infinity)) {
     if (child == null || child === false) continue;
     node.append(child instanceof Node ? child : document.createTextNode(child));
   }
@@ -49,6 +49,30 @@ export function splitName(name) {
   const base = name.replace(/\.[a-z0-9]{1,4}$/i, '');
   const at = base.search(/\s[([]/);
   return at > 0 ? [base.slice(0, at), base.slice(at + 1)] : [base, ''];
+}
+
+const fold = (word) =>
+  word
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
+    .toLowerCase();
+
+/**
+ * Marks the words of a name that the search matched, folded the way the server folds them
+ * ("Pokémon" answers "pokemon"). A half-typed last word marks only the part typed so far.
+ */
+export function highlight(text, match) {
+  if (!match?.terms?.length) return [text];
+  const last = match.terms[match.terms.length - 1];
+  return text.split(/([\p{L}\p{N}]+)/u).map((part) => {
+    const word = fold(part);
+    if (match.terms.includes(word)) return el('mark', {}, part);
+    if (match.prefix && last.length >= 2 && word.startsWith(last)) {
+      const cut = word.length === part.length ? last.length : part.length;
+      return [el('mark', {}, part.slice(0, cut)), part.slice(cut)];
+    }
+    return part;
+  });
 }
 
 export const count = (value) => new Intl.NumberFormat().format(value);
