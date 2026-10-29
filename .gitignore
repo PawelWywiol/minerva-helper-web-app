@@ -4,5 +4,5 @@ build/
 node_modules/
 .env
 .env.*
-data/
+/data/
 *.log
