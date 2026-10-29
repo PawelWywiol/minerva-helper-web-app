@@ -149,8 +149,13 @@ class DownloadRunner(
             if (needed > free) throw OutOfSpace(needed, free)
 
             val torrent = torrents.fetch(torrentPath)
+            // results are kept so a multi-GB disc is hashed once, failed checks are retried by the downloader
+            val checked = mutableMapOf<Path, Boolean>()
+            val intact = { index: Int, file: Path ->
+                items.filter { it.soId == index }.all { matches(it, file) }.also { if (it) checked[file] = true }
+            }
             val result =
-                downloader.download(torrent, staging, { stillWanted(items) }) { p ->
+                downloader.download(torrent, staging, { stillWanted(items) }, intact) { p ->
                     val percent = if (p.total > 0) (p.done * PERCENT / p.total).toInt() else 0
                     queue.setActive(torrentPath, Active(label, percent, p.rate, p.peers))
                 }
@@ -160,7 +165,7 @@ class DownloadRunner(
             val files = loadTorrentInfo(torrent).files()
             val wanted = stillWanted(items)
             val finished = items.filter { it.soId in wanted }
-            finished.forEach { verifyAndPlace(it, staging.resolve(files.filePath(it.soId))) }
+            finished.forEach { verifyAndPlace(it, staging.resolve(files.filePath(it.soId)), checked) }
             // partial data is kept on failure so the next run resumes
             if (finished.size == items.size) staging.toFile().deleteRecursively()
         } catch (_: SelectiveDownloader.AllPaused) {
@@ -181,21 +186,32 @@ class DownloadRunner(
         return items.filterNot { it.id in paused }.mapTo(mutableSetOf()) { it.soId }
     }
 
+    // md5 from the archive, else sha1, else size
+    private fun matches(
+        item: QueueItem,
+        file: Path,
+    ): Boolean {
+        if (!file.isRegularFile() || file.fileSize() != item.size) return false
+        return when {
+            item.md5 != null -> file.md5() == item.md5
+            item.sha1 != null -> file.sha1() == item.sha1
+            else -> true
+        }
+    }
+
     private fun verifyAndPlace(
         item: QueueItem,
         file: Path,
+        checked: Map<Path, Boolean>,
     ) {
         queue.setState(item.id, DownloadState.VERIFYING)
-        val size = if (file.isRegularFile()) file.fileSize() else -1
-        val md5 = if (size == item.size && item.md5 != null) file.md5() else null
-        if (size != item.size || md5 != item.md5) {
+        if (checked[file] != true && !matches(item, file)) {
             log.warn(
-                "verification failed for {}: size {} of {}, md5 {} expected {}",
+                "verification failed for {}: expected size {}, md5 {}, sha1 {}",
                 file,
-                size,
                 item.size,
-                md5,
                 item.md5,
+                item.sha1,
             )
             // a damaged file is deleted, left in staging it would look finished on the next run
             file.deleteIfExists()
