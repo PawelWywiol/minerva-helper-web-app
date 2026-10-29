@@ -2,6 +2,7 @@ package io.github.pawelwywiol.minervaweb.web
 
 import io.github.pawelwywiol.minervaweb.catalog.CatalogService
 import io.github.pawelwywiol.minervaweb.download.DownloadRunner
+import io.github.pawelwywiol.minervaweb.metadata.GameInfoLookup
 import io.github.pawelwywiol.minervaweb.placement.FilePlacement
 import io.github.pawelwywiol.minervaweb.placement.isValidFolder
 import io.github.pawelwywiol.minervaweb.platform.Systems
@@ -35,6 +36,7 @@ class Services(
     val settings: Settings,
     val placement: FilePlacement,
     val systems: Systems,
+    val gameInfo: GameInfoLookup,
     val version: String,
 )
 

@@ -5,6 +5,7 @@ import io.github.pawelwywiol.minervaweb.catalog.CatalogSync
 import io.github.pawelwywiol.minervaweb.catalog.HashesDownloader
 import io.github.pawelwywiol.minervaweb.download.DownloadRunner
 import io.github.pawelwywiol.minervaweb.download.TorrentCache
+import io.github.pawelwywiol.minervaweb.metadata.GameInfoLookup
 import io.github.pawelwywiol.minervaweb.placement.FilePlacement
 import io.github.pawelwywiol.minervaweb.platform.Systems
 import io.github.pawelwywiol.minervaweb.queue.DownloadQueue
@@ -40,6 +41,7 @@ internal fun testServices(dir: Path): Services {
         settings = settings,
         placement = placement,
         systems = Systems(),
+        gameInfo = GameInfoLookup(dir.resolve("gameinfo"), http, UNREACHABLE, UNREACHABLE),
         version = "test",
     )
 }

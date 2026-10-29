@@ -2,6 +2,7 @@ package io.github.pawelwywiol.minervaweb.web
 
 import io.github.pawelwywiol.minervaweb.catalog.CatalogReader
 import io.github.pawelwywiol.minervaweb.catalog.CatalogService
+import io.github.pawelwywiol.minervaweb.metadata.GameInfoLookup
 import io.github.pawelwywiol.minervaweb.platform.Systems
 import io.github.pawelwywiol.minervaweb.queue.DownloadQueue
 import io.github.pawelwywiol.minervaweb.settings.Settings
@@ -22,6 +23,7 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import java.util.Base64
 
 private const val DEFAULT_PAGE = 50
 private const val MAX_PAGE = 200
@@ -48,6 +50,7 @@ fun Route.catalogRoutes(
     systems: Systems,
     settings: Settings,
     queue: DownloadQueue,
+    gameInfo: GameInfoLookup,
 ) {
     get("/api/catalog") {
         val status = catalog.status
@@ -137,6 +140,8 @@ fun Route.catalogRoutes(
 
     get("/api/roms/{id}") {
         call.withRom(catalog) { rom ->
+            val slug = settings.slugFor(rom.collection, rom.platformKey)
+            val info = gameInfo.lookup(rom, slug)
             call.json(
                 buildJsonObject {
                     putRom(rom, Marks(queue))
@@ -145,10 +150,11 @@ fun Route.catalogRoutes(
                     put("sha1", rom.sha1)
                     put("favourite", queue.isFavourite(rom))
                     put("folder", settings.folderFor(rom.collection, rom.platformKey))
-                    put(
-                        "platform",
-                        systems.labelFor(rom.platformKey, settings.slugFor(rom.collection, rom.platformKey)),
-                    )
+                    put("platform", systems.labelFor(rom.platformKey, slug))
+                    put("title", info.title)
+                    put("system", info.system)
+                    // inlined so no route ever serves a file from disk
+                    put("cover", info.cover?.let { "data:image/png;base64," + Base64.getEncoder().encodeToString(it) })
                 },
             )
         }
