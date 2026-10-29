@@ -33,15 +33,31 @@ class CatalogTest {
     @Test
     fun `search matches prefixes and glued words`() =
         reader().use { catalog ->
-            assertEquals(listOf("Super Mario Bros. (World).zip"), catalog.search("super mar").map { it.name })
-            assertEquals(listOf("ZoomAmiga (Europe).zip"), catalog.search("zoom amiga").map { it.name })
-            assertEquals(emptyList(), catalog.search("\"-()"))
+            assertEquals(listOf("Super Mario Bros. (World).zip"), catalog.find("super mar").map { it.name })
+            assertEquals(listOf("ZoomAmiga (Europe).zip"), catalog.find("zoom amiga").map { it.name })
+            assertEquals(emptyList(), catalog.find("\"-()"))
         }
+
+    @Test
+    fun `search ranks by shared words whatever their order, case or punctuation`() {
+        val nes = "./No-Intro/${TestCatalog.NES}"
+        val extra =
+            listOf("Super Mario Bros. 2 (Japan).zip", "Mario Bros. (World).zip", "Pokémon Puzzle (USA).zip")
+                .mapIndexed { i, name -> listOf<Any?>("$nes/$name", "No-Intro/nes.torrent", 20 + i, null) }
+        CatalogReader(TestCatalog.catalog(dir, extra)).use { catalog ->
+            assertEquals(
+                listOf("Super Mario Bros. 2 (Japan).zip", "Super Mario Bros. (World).zip", "Mario Bros. (World).zip"),
+                catalog.find("2, BROS) (mario -- super ").map { it.name },
+            )
+            assertEquals(listOf("Pokémon Puzzle (USA).zip"), catalog.find("pokemon").map { it.name })
+            assertEquals(emptyList(), catalog.find("tetris attack"))
+        }
+    }
 
     @Test
     fun `rom keeps torrent position and hashes`() =
         reader().use { catalog ->
-            val rom = catalog.search("mario").single()
+            val rom = catalog.find("mario").single()
             assertEquals("No-Intro/nes.torrent", rom.torrentPath)
             assertEquals(3, rom.soId)
             assertEquals(TestCatalog.MD5, rom.md5)
@@ -70,7 +86,7 @@ class CatalogTest {
             }
         CatalogReader(TestCatalog.catalog(dir, extra)).use { catalog ->
             val nesId = catalog.platforms("No-Intro").single().id
-            val names = catalog.search(listOf(nesId), listOf("zelda")).map { it.name }
+            val names = catalog.rank(listOf("zelda"), prefix = false, listOf(nesId)).map { it.name }
             assertEquals(
                 listOf("Zelda (Europe).zip", "Zelda (USA).zip", "Zelda (Japan).zip", "Zelda (USA) [b].zip"),
                 names,

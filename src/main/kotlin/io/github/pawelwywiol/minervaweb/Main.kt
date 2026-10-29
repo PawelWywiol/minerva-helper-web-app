@@ -10,6 +10,7 @@ import io.github.pawelwywiol.minervaweb.placement.FilePlacement
 import io.github.pawelwywiol.minervaweb.platform.Systems
 import io.github.pawelwywiol.minervaweb.queue.DownloadQueue
 import io.github.pawelwywiol.minervaweb.settings.Settings
+import io.github.pawelwywiol.minervaweb.vpn.VpnCheck
 import io.github.pawelwywiol.minervaweb.web.Services
 import io.github.pawelwywiol.minervaweb.web.catalogRoutes
 import io.github.pawelwywiol.minervaweb.web.queueRoutes
@@ -81,6 +82,11 @@ fun main(args: Array<String>) {
             placement = placement,
             systems = Systems(),
             gameInfo = GameInfoLookup(dataDir.resolve("gameinfo"), http),
+            vpn =
+                System
+                    .getenv(
+                        "VPN_CONTROL_URL",
+                    )?.let { VpnCheck(http, URI(it.trimEnd('/') + "/")) } ?: VpnCheck(http),
             version = Services::class.java.`package`.implementationVersion ?: "dev",
         )
 

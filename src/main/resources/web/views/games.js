@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { badge, el, icon, size, splitName, toast } from '../dom.js';
+import { badge, count, el, highlight, icon, size, splitName, toast } from '../dom.js';
 import { detail } from './detail.js';
 
 export function getState(rom) {
@@ -61,7 +61,10 @@ export function games({ onRemove } = {}) {
     const status = el('span', { className: 'status' });
     const pick = el('button', { type: 'button', className: 'pick' }, [
       badge(rom.folder, rom.family),
-      el('span', { className: 'title' }, [title, tags ? el('span', { className: 'tags' }, ` ${tags}`) : null]),
+      el('span', { className: 'title' }, [
+        highlight(title, rom.match),
+        tags ? el('span', { className: 'tags' }, highlight(` ${tags}`, rom.match)) : null,
+      ]),
       el('span', { className: 'sub' }, [el('span', {}, rom.platform), el('span', {}, size(rom.size)), status]),
     ]);
     pick.addEventListener('click', () => select(rom.id));
@@ -110,6 +113,18 @@ export function games({ onRemove } = {}) {
     },
     append(roms) {
       list.append(...roms.map(build));
+    },
+    /** One pasted line and its best matches, under a heading that says what was asked. */
+    appendGroup(query, roms, system) {
+      const found =
+        roms.length === 0 ? 'no match' : `${count(roms.length)} best ${roms.length === 1 ? 'match' : 'matches'}`;
+      list.append(
+        el('div', { className: roms.length === 0 ? 'group-title none' : 'group-title' }, [
+          el('strong', {}, query),
+          el('span', {}, system ? `${found} in roms/${system.folder}` : found),
+        ]),
+        ...roms.map(build),
+      );
     },
     patch(id, fields) {
       const row = rows.get(id);

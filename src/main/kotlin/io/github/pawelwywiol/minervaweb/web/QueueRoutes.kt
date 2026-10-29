@@ -11,11 +11,14 @@ import io.github.pawelwywiol.minervaweb.queue.DownloadState
 import io.github.pawelwywiol.minervaweb.settings.MAX_CONCURRENT_DOWNLOADS
 import io.github.pawelwywiol.minervaweb.settings.MIN_CONCURRENT_DOWNLOADS
 import io.github.pawelwywiol.minervaweb.settings.Settings
+import io.github.pawelwywiol.minervaweb.vpn.VpnCheck
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -38,6 +41,7 @@ class Services(
     val placement: FilePlacement,
     val systems: Systems,
     val gameInfo: GameInfoLookup,
+    val vpn: VpnCheck,
     val version: String,
 )
 
@@ -167,6 +171,8 @@ fun Route.queueRoutes(s: Services) {
     }
 
     get("/api/settings") { call.json(settingsJson(s)) }
+
+    get("/api/vpn") { call.json(withContext(Dispatchers.IO) { s.vpn.check() }) }
 
     post("/api/settings") {
         val body = call.body() ?: return@post call.badRequest()

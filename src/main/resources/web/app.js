@@ -79,6 +79,17 @@ function shell() {
     views.search.query(query);
   }
   input.addEventListener('input', onType);
+  // a one-line box would flatten a pasted list into one long query
+  input.addEventListener('paste', (event) => {
+    const text = event.clipboardData?.getData('text') ?? '';
+    if (!/\r?\n/.test(text.trim())) return;
+    event.preventDefault();
+    input.value = '';
+    if (route().key === 'search') history.replaceState(null, '', '#search');
+    else location.hash = '#search';
+    views.search.query('');
+    views.search.list(text);
+  });
 
   let current = null;
   function show() {

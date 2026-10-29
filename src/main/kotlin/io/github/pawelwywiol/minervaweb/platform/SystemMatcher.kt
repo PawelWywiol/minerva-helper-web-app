@@ -1,12 +1,14 @@
 package io.github.pawelwywiol.minervaweb.platform
 
 import io.github.pawelwywiol.minervaweb.catalog.CatalogReader
-import io.github.pawelwywiol.minervaweb.catalog.searchTerms
+import io.github.pawelwywiol.minervaweb.catalog.queryWords
+import io.github.pawelwywiol.minervaweb.catalog.words
 import io.github.pawelwywiol.minervaweb.settings.Settings
 
 private const val MAX_SYSTEM_WORDS = 3
 private const val MIN_PREFIX = 2
 private const val MAX_SUGGESTIONS = 6
+private const val MIN_DERIVED_ALIAS = 4
 
 // "nes mario", "mario nes", "amiga cd32": a system named at either end of the query narrows it to that folder
 class SystemMatcher(
@@ -32,12 +34,14 @@ class SystemMatcher(
         query: String,
         anywhere: Boolean = false,
     ): Query {
-        val terms = searchTerms(query)
+        val terms = words(query)
         val all = group(platforms)
         val byAlias = all.flatMap { system -> aliases(system).map { it to system } }.toMap()
         val (system, rest) = if (anywhere) null to terms else split(terms, byAlias)
         val suggestions = if (system != null) listOf(system) else startingWith(all, terms.joinToString(""))
-        return Query(system, rest, suggestions)
+        // "NES / Famicom - Mario": the second name of the same system is not part of the title
+        val title = if (system == null) rest else rest.filterNot { it in aliases(system) }
+        return Query(system, queryWords(title), suggestions)
     }
 
     private fun startingWith(
@@ -78,12 +82,14 @@ class SystemMatcher(
                 )
             }
 
-    // the label minus its maker catches "genesis" and "playstation" without a hand-written alias each
+    // the label minus its maker catches "genesis" and "playstation" without a hand-written alias each;
+    // too short a remainder ("ii" of Apple II) would swallow game titles
     private fun aliases(system: System): Set<String> =
         buildSet {
             add(normalise(system.folder))
-            add(normalise(system.label))
-            add(normalise(system.label.substringAfter(' ')))
+            listOf(system.label, system.label.substringAfter(' '))
+                .map(::normalise)
+                .filterTo(this) { it.length >= MIN_DERIVED_ALIAS }
             addAll(systems.aliasesFor(system.folder))
         }
 

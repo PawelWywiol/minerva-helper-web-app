@@ -5,10 +5,14 @@ import { games } from './games.js';
 /** Long enough that a two-letter prefix does not sweep the whole 2.4M-row index on every keystroke. */
 const DEBOUNCE_MS = 200;
 const EXAMPLES = ['nes mario', 'amiga cd32', 'psx final fantasy', 'genesis sonic', 'arcade'];
+const MAX_LINES = 300;
+const PER_LINE = 5;
+const PARALLEL = 4;
 
 /**
  * The archive searched by name, by system, or both: "nes mario" keeps to roms/nes, "amigacd"
  * offers the systems it could mean. The query box lives in the page header, shared by every view.
+ * A pasted list searches every line on its own and shows each line's best matches under it.
  */
 export function search(mount, { onError, setQuery }) {
   const list = games();
@@ -25,13 +29,94 @@ export function search(mount, { onError, setQuery }) {
       { className: 'chips' },
       EXAMPLES.map((example) => button(example, () => setQuery(example), 'chip')),
     ),
+    el('p', {}, [
+      'Have a list? ',
+      button('Search a whole list', () => showList(''), 'link'),
+      ' or paste it into the search box.',
+    ]),
   ]);
+
+  const lines = el('textarea', {
+    rows: 8,
+    spellcheck: false,
+    placeholder: 'One game per line, for example\nNES – Super Mario Bros. 3\nSonic the Hedgehog 2 (Mega Drive)',
+    ariaLabel: 'Games to search, one per line',
+  });
+  const listBox = el('div', { className: 'panel listbox' }, [
+    lines,
+    el('div', { className: 'actions' }, [
+      button('Search list', () => runList(), 'primary'),
+      button(
+        'Close',
+        () => {
+          listBox.hidden = true;
+          paintEmpty();
+        },
+        'ghost',
+      ),
+    ]),
+  ]);
+  listBox.hidden = true;
 
   let query = '';
   let anywhere = false;
   let offset = 0;
   let timer = null;
   let generation = 0;
+
+  const withMatch = (result) =>
+    result.roms.map((rom) => ({ ...rom, match: { terms: result.terms, prefix: result.prefix } }));
+
+  function showList(text) {
+    lines.value = text;
+    listBox.hidden = false;
+    hint.hidden = true;
+    lines.focus();
+    if (text.trim()) runList();
+  }
+
+  async function runList() {
+    const mine = ++generation;
+    const wanted = lines.value
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, MAX_LINES);
+    list.set([]);
+    systems.replaceChildren();
+    more.hidden = true;
+    if (wanted.length === 0) {
+      status.textContent = 'Paste or type one game per line.';
+      return;
+    }
+    // a few requests at a time, started and painted in the list's own order
+    let free = PARALLEL;
+    const waiting = [];
+    const acquire = () => (free > 0 ? (free--, Promise.resolve()) : new Promise((resolve) => waiting.push(resolve)));
+    const release = () => (waiting.length > 0 ? waiting.shift()() : free++);
+    const results = wanted.map(async (line) => {
+      await acquire();
+      try {
+        // a newer search makes the rest of this list moot
+        return mine === generation ? await api.search(line, 0, false, PER_LINE) : null;
+      } catch {
+        return null;
+      } finally {
+        release();
+      }
+    });
+    let found = 0;
+    for (const [index, pending] of results.entries()) {
+      status.textContent = `Searching ${count(index + 1)} of ${count(wanted.length)}…`;
+      const result = await pending;
+      if (mine !== generation) return;
+      const roms = result ? withMatch(result) : [];
+      if (roms.length > 0) found++;
+      list.appendGroup(wanted[index], roms, result?.system);
+    }
+    const missing = wanted.length - found;
+    status.textContent = `${count(found)} of ${count(wanted.length)} found${missing ? `, ${count(missing)} without a match` : ''}`;
+  }
 
   function systemChip(system, active) {
     const parts = [
@@ -61,8 +146,8 @@ export function search(mount, { onError, setQuery }) {
       const result = await api.search(query, offset, anywhere);
       if (mine !== generation) return;
       offset += result.roms.length;
-      if (append) list.append(result.roms);
-      else list.set(result.roms);
+      if (append) list.append(withMatch(result));
+      else list.set(withMatch(result));
       systems.replaceChildren(
         ...(result.system ? [systemChip(result.system, true)] : result.systems.map((s) => systemChip(s, false))),
       );
@@ -95,16 +180,18 @@ export function search(mount, { onError, setQuery }) {
   const view = {
     // Same nodes every time, so coming back keeps the query, its results and the game picked.
     open() {
-      mount.replaceChildren(heading, status, systems, hint, list.node, more);
-      hint.hidden = Boolean(query);
-      if (!query) paintEmpty();
+      mount.replaceChildren(heading, listBox, status, systems, hint, list.node, more);
+      hint.hidden = Boolean(query) || !listBox.hidden;
+      if (!query && listBox.hidden) paintEmpty();
     },
+    list: showList,
     query(next) {
       clearTimeout(timer);
       const changed = next.trim() !== query;
       query = next.trim();
       if (!changed) return;
       anywhere = false;
+      listBox.hidden = true;
       hint.hidden = Boolean(query);
       if (!query) {
         paintEmpty();
