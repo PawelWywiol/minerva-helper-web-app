@@ -30,6 +30,7 @@ class CatalogReader(
 
     data class Platform(
         val id: Long,
+        val collection: String,
         val key: String,
         val fileCount: Long,
     )
@@ -60,10 +61,15 @@ class CatalogReader(
 
     fun platforms(collection: String): List<Platform> =
         query(
-            "SELECT id, platform_key, file_count FROM platform " +
+            "SELECT id, collection, platform_key, file_count FROM platform " +
                 "WHERE collection = ? AND file_count > 0 ORDER BY platform_key",
             collection,
-        ) { Platform(getLong(1), getString(2), getLong(3)) }
+        ) { Platform(getLong(1), getString(2), getString(3), getLong(4)) }
+
+    fun platforms(): List<Platform> =
+        query("SELECT id, collection, platform_key, file_count FROM platform WHERE file_count > 0") {
+            Platform(getLong(1), getString(2), getString(3), getLong(4))
+        }
 
     // keyset paging: OFFSET over a 750k-row platform is slow, seeking to (name, id) is flat
     fun browse(
@@ -113,6 +119,21 @@ class CatalogReader(
         val seen = hits.mapTo(HashSet()) { it.id }
         val extra = roms(fts, "j.name MATCH ?", listOf(joined), limit - hits.size)
         return hits + extra.filterNot { it.id in seen }
+    }
+
+    // FTS joined back to a platform filter walks every hit of the term; a scan of one system's rows is instant
+    fun search(
+        platformIds: List<Long>,
+        terms: List<String>,
+        limit: Int = DEFAULT_PAGE,
+        offset: Int = 0,
+    ): List<Rom> {
+        if (platformIds.isEmpty()) return emptyList()
+        val where =
+            "f.platform_id IN (${platformIds.joinToString(",")})" + terms.joinToString("") { " AND f.name LIKE ?" }
+        val order = if (terms.isEmpty()) " ORDER BY f.name, f.id" else " ORDER BY f.name LIKE ? DESC, f.name, f.id"
+        val args = terms.map { "%$it%" } + terms.take(1).map { "$it%" }
+        return roms("FROM file f", where + order, args, limit, offset)
     }
 
     private fun roms(
@@ -167,5 +188,5 @@ private fun toJoinedMatchExpression(query: String): String? {
     return terms.joinToString("") + "*"
 }
 
-private fun searchTerms(query: String): List<String> =
+internal fun searchTerms(query: String): List<String> =
     query.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }

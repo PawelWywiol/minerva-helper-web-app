@@ -131,8 +131,8 @@ fun Route.queueRoutes(s: Services) {
     get("/api/favourites") {
         val roms = s.catalog.read { reader -> s.queue.favourites().mapNotNull { (c, p, n) -> reader.rom(c, p, n) } }
         if (roms == null) return@get call.noCatalog()
-        val marks = Marks(s.queue)
-        call.json(buildJsonObject { put("roms", buildJsonArray { roms.forEach { add(romJson(it, marks)) } }) })
+        val view = RomView(s)
+        call.json(buildJsonObject { put("roms", buildJsonArray { roms.forEach { add(romJson(it, view)) } }) })
     }
 
     post("/api/favourites") {

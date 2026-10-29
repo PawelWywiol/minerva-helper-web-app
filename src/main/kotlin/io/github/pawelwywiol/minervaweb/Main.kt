@@ -93,7 +93,7 @@ fun Application.module(
 ) {
     base(allowedHosts)
     routing {
-        catalogRoutes(services.catalog, services.systems, services.settings, services.queue, services.gameInfo)
+        catalogRoutes(services)
         queueRoutes(services)
         webRoutes()
     }
