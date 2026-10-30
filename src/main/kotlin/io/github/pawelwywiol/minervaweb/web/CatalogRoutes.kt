@@ -16,6 +16,8 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -102,7 +104,13 @@ fun Route.catalogRoutes(s: Services) {
     }
 
     get("/api/collections") {
+        val sizes = withContext(Dispatchers.IO) { catalog.platformBytes() }
         call.withCatalog(catalog) { reader ->
+            val bytes =
+                reader
+                    .platforms()
+                    .groupBy { it.collection }
+                    .mapValues { (_, platforms) -> platforms.sumOf { sizes[it.id] ?: 0L } }
             buildJsonObject {
                 put(
                     "collections",
@@ -113,6 +121,7 @@ fun Route.catalogRoutes(s: Services) {
                                     put("name", it.name)
                                     put("fileCount", it.fileCount)
                                     put("platformCount", it.platformCount)
+                                    put("bytes", bytes[it.name] ?: 0L)
                                 },
                             )
                         }
@@ -124,6 +133,7 @@ fun Route.catalogRoutes(s: Services) {
 
     get("/api/collections/{name}/platforms") {
         val collection = call.parameters["name"].orEmpty()
+        val sizes = withContext(Dispatchers.IO) { catalog.platformBytes() }
         call.withCatalog(catalog) { reader ->
             buildJsonObject {
                 put("collection", collection)
@@ -140,6 +150,7 @@ fun Route.catalogRoutes(s: Services) {
                                     put("family", systems.familyFor(slug))
                                     put("folder", settings.folderFor(collection, it.key))
                                     put("fileCount", it.fileCount)
+                                    put("bytes", sizes[it.id] ?: 0L)
                                 },
                             )
                         }

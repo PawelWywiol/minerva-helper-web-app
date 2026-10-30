@@ -105,6 +105,9 @@ function shell() {
       current = view;
       main.replaceChildren(view.mount);
       view.open();
+    } else {
+      // a link into Browse from the open view itself, such as a game's path
+      view.go?.();
     }
     for (const link of links) {
       if (link.dataset.view === key) link.setAttribute('aria-current', 'page');

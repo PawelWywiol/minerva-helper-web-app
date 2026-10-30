@@ -33,6 +33,10 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 private const val RECENT_DOWNLOADS = 20
+private const val BULK_PAGE = 5000
+
+// a folder queued whole can hold tens of thousands of games; the queue view shows the front of it
+private const val QUEUE_VIEW = 200
 
 class Services(
     val catalog: CatalogService,
@@ -78,6 +82,49 @@ fun Route.queueRoutes(s: Services) {
     }
 
     get("/api/queue") { call.json(queueJson(s)) }
+
+    // a whole collection, or one platform of it; refused when it cannot fit next to what is already queued
+    post("/api/queue/all") {
+        val body = call.body() ?: return@post call.badRequest()
+        val collection = body["collection"]?.jsonPrimitive?.contentOrNull ?: return@post call.badRequest()
+        val platformId = body["platformId"]?.jsonPrimitive?.longOrNull
+        val answer =
+            withContext(Dispatchers.IO) {
+                val ids =
+                    s.catalog.read { reader ->
+                        reader.platforms(collection).map { it.id }.filter { platformId == null || it == platformId }
+                    } ?: return@withContext null
+                val sizes = s.catalog.platformBytes()
+                val bytes = ids.sumOf { sizes[it] ?: 0L }
+                val room = s.placement.freeBytes() - s.queue.all().sumOf { it.size }
+                if (ids.isEmpty() || bytes > room) {
+                    return@withContext buildJsonObject {
+                        put("added", 0)
+                        put("fits", false)
+                        put("bytes", bytes)
+                        put("freeBytes", room.coerceAtLeast(0))
+                    }
+                }
+                val downloaded = s.queue.downloadedKeys()
+                var added = 0
+                s.catalog.read { reader ->
+                    ids.forEach { id ->
+                        var page = reader.browse(id, limit = BULK_PAGE)
+                        while (page.isNotEmpty()) {
+                            added += s.runner.addAll(page, downloaded)
+                            if (page.size < BULK_PAGE) break
+                            page = reader.browse(id, page.last().name, page.last().id, BULK_PAGE)
+                        }
+                    }
+                }
+                buildJsonObject {
+                    put("added", added)
+                    put("fits", true)
+                    put("bytes", bytes)
+                }
+            }
+        if (answer == null) call.noCatalog() else call.json(answer)
+    }
 
     post("/api/queue") {
         call.withRom(s.catalog) { rom ->
@@ -148,6 +195,7 @@ fun Route.queueRoutes(s: Services) {
                 .byTorrent()
                 .values
                 .flatten()
+                .take(QUEUE_VIEW)
         val done = s.queue.downloaded().take(RECENT_DOWNLOADS)
         val found =
             s.catalog.read { reader ->
@@ -224,6 +272,7 @@ private fun moveDownloaded(
 private fun queueJson(s: Services): JsonObject {
     val byTorrent = s.queue.byTorrent()
     val items = byTorrent.values.flatten()
+    val shown = items.take(QUEUE_VIEW).map { it.id }.toSet()
     val downloaded = s.queue.downloaded()
     return buildJsonObject {
         put(
@@ -235,10 +284,11 @@ private fun queueJson(s: Services): JsonObject {
                             put("torrentPath", torrentPath)
                             put("label", torrentPath.substringAfterLast('/'))
                             put("paused", group.all { it.state == DownloadState.PAUSED })
+                            put("count", group.size)
                             put(
                                 "items",
                                 buildJsonArray {
-                                    group.forEach { item ->
+                                    group.filter { it.id in shown }.forEach { item ->
                                         add(
                                             buildJsonObject {
                                                 put("id", item.id)

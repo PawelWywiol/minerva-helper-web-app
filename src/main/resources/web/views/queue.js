@@ -81,7 +81,7 @@ export function queue(mount, { onError }) {
       bar.hidden = !active;
       progress.textContent = active
         ? `${active.percent}%, ${size(active.rate)}/s from ${active.peers} peers`
-        : `${count(fresh.items.length)} ${fresh.items.length === 1 ? 'game' : 'games'}`;
+        : `${count(fresh.count)} ${fresh.count === 1 ? 'game' : 'games'}`;
       if (active) fill.style.width = `${active.percent}%`;
     });
 
@@ -96,6 +96,7 @@ export function queue(mount, { onError }) {
     [
       data.groups.map((g) => `${g.torrentPath}=${g.items.map((i) => i.id).join(',')}`).join('|'),
       data.downloaded.map((d) => d.id).join(','),
+      data.count,
     ].join('#');
 
   async function rebuild(data) {
@@ -115,9 +116,10 @@ export function queue(mount, { onError }) {
     const { roms, downloaded } = await api.queueRoms();
     list.set([]);
     if (roms.length > 0) {
+      const hidden = data.count - roms.length;
       list.appendGroup(
         'In the queue',
-        '',
+        hidden > 0 ? `the next ${count(roms.length)}, ${count(hidden)} more after them` : '',
         roms.map((rom) => ({ ...rom, key: `q${rom.queueId}` })),
       );
     }

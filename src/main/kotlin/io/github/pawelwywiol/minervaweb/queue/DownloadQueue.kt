@@ -118,6 +118,41 @@ class DownloadQueue(
         return removed == 0
     }
 
+    // one transaction for a whole folder; rows already queued are left as they are
+    @Synchronized
+    fun addAll(roms: List<CatalogReader.Rom>): Int {
+        db.autoCommit = false
+        try {
+            val positions = HashMap<String, Int>()
+            val added =
+                roms.sumOf { rom ->
+                    update(
+                        "INSERT OR IGNORE INTO item(name,size,collection,platform_key,torrent_path,so_id,md5,sha1," +
+                            "state,added_at,position) " +
+                            "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                        rom.name,
+                        rom.size,
+                        rom.collection,
+                        rom.platformKey,
+                        rom.torrentPath,
+                        rom.soId,
+                        rom.md5,
+                        rom.sha1,
+                        DownloadState.QUEUED,
+                        System.currentTimeMillis(),
+                        positions.getOrPut(rom.torrentPath) { positionFor(rom.torrentPath) },
+                    )
+                }
+            db.commit()
+            return added
+        } catch (e: Exception) {
+            db.rollback()
+            throw e
+        } finally {
+            db.autoCommit = true
+        }
+    }
+
     // a ROM joins its torrent's position, so a second file from the front torrent is not sent to the back
     private fun positionFor(torrentPath: String): Int =
         query("SELECT MIN(position) FROM item WHERE torrent_path = ?", torrentPath) { nullableInt() }.firstOrNull()

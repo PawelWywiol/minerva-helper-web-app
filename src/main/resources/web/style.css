@@ -842,6 +842,34 @@ button.card {
 button.card:hover {
   border-color: color-mix(in oklab, var(--accent) 55%, var(--line));
 }
+.card-wrap {
+  position: relative;
+  display: grid;
+}
+.card-wrap > button.card {
+  padding-right: 52px;
+}
+.card-wrap > .icon-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.confirm {
+  margin-top: 12px;
+}
+.confirm p {
+  margin: 0 0 6px;
+}
+.facts .path a {
+  color: var(--accent);
+}
 .card .badge {
   margin-bottom: 6px;
 }
