@@ -69,6 +69,9 @@ export const queueRoms = () => get('/api/queue/roms');
 /** Answers with the ROM's marks as they now stand, which is what the caller repaints its row from. */
 export const toggleQueue = (romId) => send('/api/queue', { romId });
 
+/** A whole collection, or one platform of it; answers how many were added and whether it fits. */
+export const queueAll = (collection, platformId) => send('/api/queue/all', { collection, platformId });
+
 export const pauseGroup = (torrentPath, paused) => send('/api/queue/pause', { torrentPath, paused });
 
 export const moveGroup = (from, to) => send('/api/queue/move', { from, to });

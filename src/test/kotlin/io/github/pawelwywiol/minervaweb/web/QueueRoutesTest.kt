@@ -117,6 +117,28 @@ class QueueRoutesTest {
         }
 
     @Test
+    fun `a whole platform is queued once, skipping files already in its folder`() =
+        app {
+            val folder = Files.createDirectories(dir.resolve("library/roms/nes"))
+            Files.write(folder.resolve("Super Mario Bros. (World).zip"), ByteArray(1000))
+            val platform = get("/api/collections/No-Intro/platforms").list("platforms").single()
+            assertEquals("2001", platform.str("bytes"))
+            val all = """{"collection":"No-Intro","platformId":${platform.str("id")}}"""
+
+            assertEquals("1", post("/api/queue/all", all).json().str("added"))
+            assertEquals("Zelda (USA).zip", queueItem().str("name"))
+            assertEquals("1", get("/api/queue").str("downloadedTotal"))
+            assertEquals("0", post("/api/queue/all", all).json().str("added"))
+        }
+
+    @Test
+    fun `collections carry their size`() =
+        app {
+            val noIntro = get("/api/collections").list("collections").single { it.str("name") == "No-Intro" }
+            assertEquals("2001", noIntro.str("bytes"))
+        }
+
+    @Test
     fun `settings reject folders that leave the library`() =
         app {
             val escape = """{"collection":"No-Intro","platformKey":"$nes","folder":"../etc"}"""

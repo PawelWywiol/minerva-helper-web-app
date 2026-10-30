@@ -75,6 +75,10 @@ class CatalogReader(
             Platform(getLong(1), getString(2), getString(3), getLong(4))
         }
 
+    // a full scan of the file table, about a second, so callers keep the answer
+    fun platformBytes(): Map<Long, Long> =
+        query("SELECT platform_id, sum(size) FROM file GROUP BY platform_id") { getLong(1) to getLong(2) }.toMap()
+
     // keyset paging: OFFSET over a 750k-row platform is slow, seeking to (name, id) is flat
     fun browse(
         platformId: Long,

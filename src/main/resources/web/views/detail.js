@@ -20,6 +20,17 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
 
   const fact = (key, value) => [el('dt', {}, key), el('dd', {}, value)];
 
+  // where the file sits in the archive, each level a link into Browse
+  const path = (rom) => {
+    const collection = new URLSearchParams({ c: rom.collection });
+    const platform = new URLSearchParams({ c: rom.collection, p: rom.platformKey });
+    return el('span', { className: 'path' }, [
+      el('a', { href: `#browse?${collection}` }, rom.collection),
+      ' / ',
+      el('a', { href: `#browse?${platform}` }, rom.platformKey),
+    ]);
+  };
+
   function clear() {
     current = null;
     full = null;
@@ -88,7 +99,7 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
       tab === 'details'
         ? el('dl', { className: 'facts', role: 'tabpanel' }, [
             ...fact('Size', size(rom.size)),
-            ...fact('Collection', rom.collection),
+            ...fact('Path', path(rom)),
             ...fact('Torrent', full ? full.torrentPath.split('/').pop() : '…'),
             ...fact('MD5', full ? full.md5 || 'not listed' : '…'),
             ...fact('SHA-1', full ? full.sha1 || 'not listed' : '…'),

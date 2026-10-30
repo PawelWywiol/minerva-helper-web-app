@@ -49,6 +49,16 @@ class CatalogService(
     fun <T> read(block: (CatalogReader) -> T): T? =
         if (sync.isReady()) CatalogReader(sync.catalogFile).use(block) else null
 
+    // keyed by the file's timestamp, so a catalogue update recounts
+    private var bytes: Pair<Long, Map<Long, Long>>? = null
+
+    @Synchronized
+    fun platformBytes(): Map<Long, Long> {
+        val stamp = sync.catalogFile.toFile().lastModified()
+        bytes?.takeIf { it.first == stamp }?.let { return it.second }
+        return (read { it.platformBytes() } ?: emptyMap()).also { bytes = stamp to it }
+    }
+
     private fun CatalogSync.Stage.toStatus(): Status =
         when (this) {
             is CatalogSync.Stage.Downloading -> Status(State.DOWNLOADING, done, total)

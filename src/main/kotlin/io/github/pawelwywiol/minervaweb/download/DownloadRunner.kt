@@ -100,6 +100,27 @@ class DownloadRunner(
         return added
     }
 
+    // a whole folder at once: what is downloaded or already in its folder is skipped, never fetched again
+    fun addAll(
+        roms: List<CatalogReader.Rom>,
+        downloaded: Set<String>,
+    ): Int {
+        val wanted =
+            roms.filter { rom ->
+                if (DownloadQueue.key(rom.torrentPath, rom.soId) in downloaded) return@filter false
+                val folder = settings.folderFor(rom.collection, rom.platformKey)
+                if (placement.exists(folder, rom.name, rom.size)) {
+                    queue.recordDownloaded(rom, folder)
+                    false
+                } else {
+                    true
+                }
+            }
+        val added = queue.addAll(wanted)
+        if (added > 0) kick()
+        return added
+    }
+
     private suspend fun runOnce() {
         if (pendingGroups().isEmpty()) return
         try {
