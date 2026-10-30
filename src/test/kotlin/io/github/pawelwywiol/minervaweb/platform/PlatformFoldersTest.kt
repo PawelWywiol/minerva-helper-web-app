@@ -15,6 +15,7 @@ class PlatformFoldersTest {
         assertEquals("snes", folders.folderFor("TOSEC", "Nintendo/Super Famicom & Super Entertainment System"))
         assertEquals("plus4", folders.folderFor("TOSEC", "Commodore/C16, C116 & Plus-4"))
         assertEquals("xbox360", folders.folderFor("Redump", "Microsoft - Xbox 360"))
+        assertEquals("pokemini", folders.folderFor("No-Intro", "Nintendo - Pokemon Mini"))
         assertEquals("Microsoft Xbox 360", systems.labelFor("Microsoft - Xbox 360", "xbox360"))
     }
 
