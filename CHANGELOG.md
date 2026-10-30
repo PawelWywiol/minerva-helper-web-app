@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.9](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.8...v0.1.9) (2026-10-30)
+
+### Features
+
+* browse sizes and queue whole folders ([#29](https://github.com/PawelWywiol/minerva-helper-web-app/issues/29)) ([8a54eb1](https://github.com/PawelWywiol/minerva-helper-web-app/commit/8a54eb12d218a870907d324339046cde76c06e23))
+
 ## [0.1.8](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.7...v0.1.8) (2026-10-30)
 
 ### Bug Fixes
