@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.10](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.9...v0.1.10) (2026-10-30)
+
+### Features
+
+* confirm whole-folder downloads in a modal dialog ([#31](https://github.com/PawelWywiol/minerva-helper-web-app/issues/31)) ([469d464](https://github.com/PawelWywiol/minerva-helper-web-app/commit/469d46468a0ead4e574d3746c7195534db55c086))
+
 ## [0.1.9](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.8...v0.1.9) (2026-10-30)
 
 ### Features
