@@ -693,7 +693,7 @@ FinalBurn Neo,samples,arcade,collection,52
 TOSEC-ISO,Commodore/C64,c64,alias,52
 Laserdisc Collection,Ares,,unmapped,52
 Laserdisc Collection,MAME,mame,auto,52
-RetroAchievements,RA - Nintendo Pokemon Mini,,unmapped,51
+RetroAchievements,RA - Nintendo Pokemon Mini,pokemini,manual,51
 TOSEC,CCE/MC-1000,,unmapped,51
 TOSEC-PIX,Multi-format/Catalogs,,unmapped,50
 No-Intro,Unofficial - Sony - PlayStation Vita (PSN) (Decrypted) (VPK),psvita,auto,50
@@ -708,7 +708,7 @@ RetroAchievements,RA - Nintendo Virtual Boy,virtualboy,auto,49
 TOSEC-PIX,Multi-format/Video,,unmapped,48
 No-Intro,NEC - PC Engine - TurboGrafx-16 (Aftermarket),,unmapped,48
 No-Intro,Emerson - Arcadia 2001,arcadia,auto,48
-No-Intro,Nintendo - Pokemon Mini,,unmapped,48
+No-Intro,Nintendo - Pokemon Mini,pokemini,manual,48
 TOSEC-ISO,Sega/NAOMI,naomi,auto,48
 TOSEC-PIX,Acorn/BBC,bbcmicro,alias,47
 TOSEC-PIX,Kaypro/Magazines,,unmapped,47
@@ -717,7 +717,7 @@ TOSEC,Luxor/ABC 80,,unmapped,47
 TOSEC,Benesse/Pocket Challenge W,,unmapped,47
 No-Intro,Mattel - Intellivision (Aftermarket),intellivision,auto,46
 No-Intro,Commodore - Amiga (Flux),amiga,auto,46
-TOSEC,Nintendo/Pokemon Mini,,unmapped,46
+TOSEC,Nintendo/Pokemon Mini,pokemini,manual,46
 TOSEC,PEL Varazdin/Orao,,unmapped,46
 TOSEC,Sega/AI Computer,,unmapped,46
 No-Intro,Nintendo - Virtual Boy (Aftermarket),virtualboy,auto,45
@@ -1194,7 +1194,7 @@ bitsavers,rss,,none,6
 Hardware Target Game Database,Sega 32X,sega32x,auto,6
 Internet Archive,romhacking_net,,none,6
 T-En Collection,Nintendo - Virtual Boy [T-En] Collection,,unmapped,6
-T-En Collection,Nintendo - Pokemon Mini [T-En] Collection,,unmapped,6
+T-En Collection,Nintendo - Pokemon Mini [T-En] Collection,pokemini,manual,6
 T-En Collection,Panasonic - 3DO Interactive Multiplayer [T-En] Collection,,unmapped,6
 T-En Collection,Sega - SG-1000 [T-En] Collection,,unmapped,6
 Redump,Arcade - Hasbro - VideoNow XP,,unmapped,6
@@ -1378,7 +1378,7 @@ No-Intro,Nintendo - Nintendo DS (Decrypted) (Private),nds,auto,2
 No-Intro,Source Code - Atari - Atari 2600 (Aftermarket),,unmapped,2
 No-Intro,Source Code - Atari - 2600,atari2600,auto,2
 No-Intro,Sanyo - MBC-550 (Flux),,unmapped,2
-No-Intro,Nintendo - Pokemon Mini (Aftermarket),,unmapped,2
+No-Intro,Nintendo - Pokemon Mini (Aftermarket),pokemini,manual,2
 No-Intro,Non-Redump - Philips - CD-i (Aftermarket),cdimono1,auto,2
 No-Intro,Source Code - Nintendo - Super Nintendo Entertainment System,,unmapped,2
 No-Intro,Non-Redump - Sega - Sega Mega CD + Sega CD (Aftermarket),,unmapped,2
