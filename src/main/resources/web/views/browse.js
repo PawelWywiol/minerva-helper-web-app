@@ -4,7 +4,7 @@ import { games } from './games.js';
 
 /**
  * Collections → platforms → games, the archive's own three levels. Each level can be queued whole,
- * after a confirmation that names its file count and size. The level reached lives in the URL hash,
+ * after a modal confirmation that names its file count and size. The level reached lives in the URL hash,
  * so a game's path in its details links straight to it.
  *
  * The game list keeps a window rather than everything: the largest platform holds 753k entries, and
@@ -35,17 +35,19 @@ export function browse(mount, { onError }) {
 
   const amount = (files, bytes) => `${count(files)} ${files === 1 ? 'file' : 'files'}, ${size(bytes)}`;
 
-  // one question at a time, shown under the heading: queueing a folder can mean terabytes
-  const confirmation = el('div', { className: 'panel confirm', role: 'alertdialog', hidden: true });
+  // a modal question: queueing a folder can mean terabytes, so Cancel holds the focus
+  const confirmation = el('dialog', { className: 'dialog', ariaLabelledby: 'queue-all-title' });
+  document.body.append(confirmation);
 
   function askToQueue(label, files, bytes, collection, platformId) {
+    const no = button('Cancel', () => confirmation.close(), 'ghost');
     const yes = button(
       'Queue all',
       async () => {
         yes.disabled = true;
         try {
           const answer = await api.queueAll(collection, platformId);
-          confirmation.hidden = true;
+          confirmation.close();
           toast(
             answer.fits
               ? `Queued ${count(answer.added)} ${answer.added === 1 ? 'file' : 'files'} from ${label}`
@@ -60,13 +62,17 @@ export function browse(mount, { onError }) {
       'primary',
     );
     confirmation.replaceChildren(
-      el('p', {}, [el('strong', {}, `Queue all of ${label}?`), ` ${amount(files, bytes)}.`]),
-      el('p', { className: 'muted' }, 'Files already in your library are skipped.'),
-      el('div', { className: 'actions' }, [yes, button('Cancel', () => (confirmation.hidden = true), 'ghost')]),
+      el('h2', { id: 'queue-all-title' }, `Queue all of ${label}?`),
+      el('p', { className: 'amount' }, amount(files, bytes)),
+      el(
+        'p',
+        { className: 'muted' },
+        'Downloads start right away unless the queue is paused. Files already in your library are skipped.',
+      ),
+      el('div', { className: 'actions' }, [no, yes]),
     );
-    confirmation.hidden = false;
-    confirmation.scrollIntoView({ block: 'nearest' });
-    yes.focus({ preventScroll: true });
+    confirmation.showModal();
+    no.focus();
   }
 
   const queueButton = (label, files, bytes, collection, platformId) => {
@@ -86,7 +92,6 @@ export function browse(mount, { onError }) {
   async function showCollections() {
     const mine = ++generation;
     remember();
-    confirmation.hidden = true;
     render(spinner('Loading collections…'));
     try {
       const { collections } = await api.collections();
@@ -94,7 +99,6 @@ export function browse(mount, { onError }) {
       render(
         el('h1', {}, 'Browse'),
         el('p', { className: 'muted' }, 'Each collection is a different preservation group’s set of dumps.'),
-        confirmation,
         el(
           'div',
           { className: 'cards' },
@@ -123,7 +127,6 @@ export function browse(mount, { onError }) {
   async function showPlatforms(collection) {
     const mine = ++generation;
     remember(collection);
-    confirmation.hidden = true;
     render(spinner('Loading platforms…'));
     try {
       const { platforms } = await api.platforms(collection);
@@ -136,7 +139,6 @@ export function browse(mount, { onError }) {
           el('h1', {}, collection),
           button(`Queue all, ${amount(files, bytes)}`, () => askToQueue(collection, files, bytes, collection), 'ghost'),
         ]),
-        confirmation,
         el(
           'div',
           { className: 'cards' },
@@ -176,7 +178,6 @@ export function browse(mount, { onError }) {
   async function showRoms(collection, platform) {
     const mine = ++generation;
     remember(collection, platform.key);
-    confirmation.hidden = true;
     const list = games();
     const rows = [];
     let cursor = null;
@@ -202,7 +203,6 @@ export function browse(mount, { onError }) {
           'ghost',
         ),
       ]),
-      confirmation,
       status,
       list.node,
       moreButton,
