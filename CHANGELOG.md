@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.8](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.7...v0.1.8) (2026-10-30)
+
+### Bug Fixes
+
+* map pokemon mini to the es-de pokemini folder ([#27](https://github.com/PawelWywiol/minerva-helper-web-app/issues/27)) ([5b90dbe](https://github.com/PawelWywiol/minerva-helper-web-app/commit/5b90dbed3c14556d3eda664d028abf6dbd5c631f))
+
 ## [0.1.7](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.6...v0.1.7) (2026-10-29)
 
 ### Features
