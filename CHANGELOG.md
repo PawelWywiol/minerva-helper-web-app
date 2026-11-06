@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.11](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.10...v0.1.11) (2026-11-06)
+
+### Features
+
+* polish translation following the browser language ([#36](https://github.com/PawelWywiol/minerva-helper-web-app/issues/36)) ([2e567e6](https://github.com/PawelWywiol/minerva-helper-web-app/commit/2e567e69cdeb9a70371d854eabe4936962f780b4))
+
+### Bug Fixes
+
+* upgrade base image packages for apt cve ([#37](https://github.com/PawelWywiol/minerva-helper-web-app/issues/37)) ([e5ac960](https://github.com/PawelWywiol/minerva-helper-web-app/commit/e5ac96076fb3e9c011a472deebcf00a2134f71e1))
+
 ## [0.1.10](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.9...v0.1.10) (2026-10-30)
 
 ### Features
