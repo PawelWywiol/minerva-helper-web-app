@@ -8,6 +8,7 @@ Browser-driven counterpart of [Minerva Helper](https://github.com/PawelWywiol/mi
 - only the picked file is fetched out of a torrent; nothing is ever uploaded (no incoming connections, no unchoking, torrents removed after each download, zero uploaded bytes checked)
 - every file is verified against the archive's checksum; disc images are unpacked, cartridge zips are kept
 - per-platform folders, ES-DE names by default; a game already in its folder is recognised instead of fetched again
+- English and Polish, following the browser's language; change it in Settings
 
 Part of the [retro](https://github.com/PawelWywiol/retro) stack, where it runs behind a VPN container. Run it behind a VPN: downloading from a swarm exposes your IP to its peers.
 

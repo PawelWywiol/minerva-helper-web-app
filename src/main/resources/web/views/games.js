@@ -1,5 +1,6 @@
 import * as api from '../api.js';
 import { badge, button, el, getState, highlight, icon, similarNote, size, splitName, toast, variant } from '../dom.js';
+import { t } from '../i18n.js';
 import { detail } from './detail.js';
 
 /**
@@ -18,9 +19,9 @@ export function games({ onRemove } = {}) {
     try {
       Object.assign(rom, await api.toggleQueue(rom.id));
       changed(rom);
-      toast(rom.queued ? `Queued for roms/${rom.folder}` : 'Removed from the queue');
+      toast(rom.queued ? t('rom.queuedFor', { folder: rom.folder }) : t('rom.unqueued'));
     } catch (error) {
-      toast(`Could not change the queue: ${error.message}`);
+      toast(t('rom.queueFailed', { message: error.message }));
     }
   }
 
@@ -28,9 +29,9 @@ export function games({ onRemove } = {}) {
     try {
       Object.assign(rom, await api.toggleFavourite(rom.id));
       changed(rom);
-      toast(rom.favourite ? 'Added to favourites' : 'Removed from favourites');
+      toast(t(rom.favourite ? 'rom.favourited' : 'rom.unfavourited'));
     } catch (error) {
-      toast(`Could not change favourites: ${error.message}`);
+      toast(t('rom.favouriteFailed', { message: error.message }));
     }
   }
 
@@ -79,9 +80,9 @@ export function games({ onRemove } = {}) {
 
     const row = el('div', { className: 'game', role: 'listitem' }, [pick, fav, get]);
     const paint = () => {
-      const state = onRemove ? { icon: 'close', label: rom.removeLabel || 'Remove from the queue' } : getState(rom);
+      const state = onRemove ? { icon: 'close', label: rom.removeLabel || t('rom.unqueue') } : getState(rom);
       fav.setAttribute('aria-pressed', String(Boolean(rom.favourite)));
-      fav.title = rom.favourite ? 'Remove from favourites' : 'Add to favourites';
+      fav.title = t(rom.favourite ? 'rom.unfavourite' : 'rom.favourite');
       fav.setAttribute('aria-label', fav.title);
       get.replaceChildren(icon(state.icon));
       get.title = state.hint || state.label;
@@ -130,7 +131,7 @@ export function games({ onRemove } = {}) {
       const nodes = [heading, ...roms.map(build)];
       if (more) {
         const next = button(
-          'More versions',
+          t('action.moreVersions'),
           async () => {
             next.disabled = true;
             try {
@@ -138,7 +139,7 @@ export function games({ onRemove } = {}) {
               next.before(...found.roms.map(build));
               next.hidden = !found.more;
             } catch (error) {
-              toast(`Could not load more versions: ${error.message}`);
+              toast(t('rom.moreVersionsFailed', { message: error.message }));
             } finally {
               next.disabled = false;
             }

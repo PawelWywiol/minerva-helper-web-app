@@ -1,5 +1,6 @@
 import * as api from '../api.js';
 import { badge, button, count, el, icon, loadHidden, loadOnScroll, saveHidden } from '../dom.js';
+import { t } from '../i18n.js';
 import { games } from './games.js';
 
 /** Long enough that a two-letter prefix does not sweep the whole 2.4M-row index on every keystroke. */
@@ -8,13 +9,7 @@ const EXAMPLES = ['nes mario', 'amiga cd32', 'psx final fantasy', 'genesis sonic
 const MAX_LINES = 300;
 const PER_LINE = 3;
 const MORE_VERSIONS = 5;
-const REGIONS = [
-  ['usa', 'USA'],
-  ['europe', 'Europe'],
-  ['world', 'World'],
-  ['japan', 'Japan'],
-  ['other', 'Other regions'],
-];
+const REGIONS = ['usa', 'europe', 'world', 'japan', 'other'];
 const PARALLEL = 4;
 
 /**
@@ -24,38 +19,38 @@ const PARALLEL = 4;
  */
 export function search(mount, { onError, setQuery }) {
   const list = games();
-  const heading = el('h1', {}, 'Search');
-  const more = button('Show more', () => run(true), 'ghost wide');
+  const heading = el('h1', {}, t('nav.search'));
+  const more = button(t('action.showMore'), () => run(true), 'ghost wide');
   more.hidden = true;
   loadOnScroll(more);
   const status = el('p', { className: 'muted' });
   const systems = el('div', { className: 'chips' });
   const hint = el('div', { className: 'hint' }, [
-    el('p', {}, 'Type a game, a system, or both.'),
+    el('p', {}, t('search.hint')),
     el(
       'div',
       { className: 'chips' },
       EXAMPLES.map((example) => button(example, () => setQuery(example), 'chip')),
     ),
     el('p', {}, [
-      'Have a list? ',
-      button('Search a whole list', () => showList(''), 'link'),
-      ' or paste it into the search box.',
+      `${t('search.haveList')} `,
+      button(t('search.wholeList'), () => showList(''), 'link'),
+      ` ${t('search.orPaste')}`,
     ]),
   ]);
 
   const lines = el('textarea', {
     rows: 8,
     spellcheck: false,
-    placeholder: 'One game per line, for example\nNES – Super Mario Bros. 3\nSonic the Hedgehog 2 (Mega Drive)',
-    ariaLabel: 'Games to search, one per line',
+    placeholder: `${t('search.listPlaceholder')}\nNES – Super Mario Bros. 3\nSonic the Hedgehog 2 (Mega Drive)`,
+    ariaLabel: t('search.listLabel'),
   });
   const listBox = el('div', { className: 'panel listbox' }, [
     lines,
     el('div', { className: 'actions' }, [
-      button('Search list', () => runList(), 'primary'),
+      button(t('search.searchList'), () => runList(), 'primary'),
       button(
-        'Close',
+        t('action.close'),
         () => {
           listBox.hidden = true;
           paintEmpty();
@@ -67,13 +62,13 @@ export function search(mount, { onError, setQuery }) {
   listBox.hidden = true;
 
   const hidden = loadHidden();
-  const regionChips = el('div', { className: 'chips regions', role: 'group', ariaLabel: 'Release regions to show' });
+  const regionChips = el('div', { className: 'chips regions', role: 'group', ariaLabel: t('search.regions') });
   function paintRegions() {
     regionChips.replaceChildren(
-      el('span', { className: 'muted' }, 'Show'),
-      ...REGIONS.map(([key, label]) => {
+      el('span', { className: 'muted' }, t('search.show')),
+      ...REGIONS.map((key) => {
         const chip = button(
-          [hidden.has(key) ? null : icon('check'), label],
+          [hidden.has(key) ? null : icon('check'), t(`search.${key}`)],
           () => {
             if (hidden.has(key)) hidden.delete(key);
             else hidden.add(key);
@@ -120,7 +115,7 @@ export function search(mount, { onError, setQuery }) {
     systems.replaceChildren();
     more.hidden = true;
     if (wanted.length === 0) {
-      status.textContent = 'Paste or type one game per line.';
+      status.textContent = t('search.listEmpty');
       return;
     }
     // a few requests at a time, started and painted in the list's own order
@@ -141,12 +136,11 @@ export function search(mount, { onError, setQuery }) {
     });
     let found = 0;
     for (const [index, pending] of results.entries()) {
-      status.textContent = `Searching ${count(index + 1)} of ${count(wanted.length)}…`;
+      status.textContent = t('search.listProgress', { done: index + 1, total: wanted.length });
       const result = await pending;
       if (mine !== generation) return;
       const roms = result ? withMatch(result) : [];
       if (roms.length > 0) found++;
-      const where = result?.system ? ` in roms/${result.system.folder}` : '';
       let shown = roms.length;
       const line = wanted[index];
       const moreVersions = async () => {
@@ -156,13 +150,21 @@ export function search(mount, { onError, setQuery }) {
       };
       list.appendGroup(
         line,
-        roms.length > 0 ? `best matches${where}` : 'no match',
+        roms.length === 0
+          ? t('search.noMatch')
+          : result.system
+            ? t('search.bestMatchesIn', { folder: result.system.folder })
+            : t('search.bestMatches'),
         roms,
         result?.more ? moreVersions : null,
       );
     }
     const missing = wanted.length - found;
-    status.textContent = `${count(found)} of ${count(wanted.length)} found${missing ? `, ${count(missing)} without a match` : ''}`;
+    status.textContent = t(missing ? 'search.listMissing' : 'search.listFound', {
+      found,
+      total: wanted.length,
+      missing,
+    });
   }
 
   function systemChip(system, active) {
@@ -173,7 +175,7 @@ export function search(mount, { onError, setQuery }) {
     ];
     if (!active) return button(parts, () => setQuery(system.folder), 'chip system');
     const clear = button(
-      [icon('close'), 'Search all systems'],
+      [icon('close'), t('search.allSystems')],
       () => {
         anywhere = true;
         run(false);
@@ -201,9 +203,9 @@ export function search(mount, { onError, setQuery }) {
       status.textContent =
         list.size === 0
           ? result.systems.length > 0
-            ? 'No game has that name. Did you mean one of these systems?'
-            : `Nothing matches “${query}”. Try fewer words or another spelling.`
-          : `${count(list.size)}${result.more ? '+' : ''} games`;
+            ? t('search.didYouMean')
+            : t('search.nothing', { query })
+          : t('games', { count: list.size, more: result.more ? '+' : '' });
       more.hidden = !result.more;
     } catch (error) {
       if (mine !== generation) return;
@@ -218,7 +220,7 @@ export function search(mount, { onError, setQuery }) {
 
   function paintEmpty() {
     generation++;
-    status.textContent = 'Search 2.4 million files across every collection.';
+    status.textContent = t('search.empty');
     systems.replaceChildren();
     list.set([]);
     more.hidden = true;
@@ -244,7 +246,7 @@ export function search(mount, { onError, setQuery }) {
         paintEmpty();
         return;
       }
-      status.textContent = 'Searching…';
+      status.textContent = t('search.searching');
       timer = setTimeout(() => run(false), DEBOUNCE_MS);
     },
   };

@@ -1,5 +1,6 @@
 import * as api from '../api.js';
-import { button, count, el, size, toast } from '../dom.js';
+import { button, el, size, toast } from '../dom.js';
+import { t } from '../i18n.js';
 import { games } from './games.js';
 
 /**
@@ -13,11 +14,11 @@ import { games } from './games.js';
 const POLL_MS = 1000;
 
 const STATES = {
-  queued: { text: 'Waiting', kind: '' },
-  downloading: { text: 'Downloading', kind: 'busy' },
-  verifying: { text: 'Checking', kind: 'busy' },
-  paused: { text: 'Paused', kind: '' },
-  failed: { text: 'Failed', kind: 'bad' },
+  queued: { text: t('queue.waiting'), kind: '' },
+  downloading: { text: t('queue.downloading'), kind: 'busy' },
+  verifying: { text: t('queue.verifying'), kind: 'busy' },
+  paused: { text: t('queue.paused'), kind: '' },
+  failed: { text: t('queue.failed'), kind: 'bad' },
 };
 
 export function queue(mount, { onError }) {
@@ -30,14 +31,14 @@ export function queue(mount, { onError }) {
       try {
         if (rom.downloadedId) {
           await api.forgetDownloaded(rom.downloadedId);
-          toast(`Forgotten. The file stays in roms/${rom.folder}`);
+          toast(t('queue.forgotten', { folder: rom.folder }));
         } else {
           await api.removeQueued(rom.queueId);
-          toast('Removed from the queue');
+          toast(t('rom.unqueued'));
         }
         await poll();
       } catch (error) {
-        toast(`Could not change the queue: ${error.message}`);
+        toast(t('rom.queueFailed', { message: error.message }));
       }
     },
   });
@@ -46,7 +47,7 @@ export function queue(mount, { onError }) {
   const free = el('p', { className: 'muted' });
   const hint = el('p', { className: 'muted' });
   const runButton = button('', () => act(() => api.setRunning(!running)), 'ghost');
-  const retryButton = button('Retry failed', () => act(() => api.retryFailed()), 'ghost');
+  const retryButton = button(t('queue.retry'), () => act(() => api.retryFailed()), 'ghost');
   const actions = el('div', { className: 'actions' }, [runButton, retryButton]);
   const torrents = el('div');
 
@@ -70,18 +71,18 @@ export function queue(mount, { onError }) {
     const down = button('↓', () => act(() => api.moveGroup(index, index + 1)), 'ghost small');
     up.disabled = index === 0;
     down.disabled = index === total - 1;
-    up.title = 'Fetch sooner';
-    down.title = 'Fetch later';
+    up.title = t('queue.sooner');
+    down.title = t('queue.later');
     pause.addEventListener('click', () => act(() => api.pauseGroup(group.torrentPath, pause.dataset.paused !== '1')));
 
     updaters.set(group.torrentPath, (fresh) => {
       pause.dataset.paused = fresh.paused ? '1' : '0';
-      pause.textContent = fresh.paused ? 'Resume' : 'Pause';
+      pause.textContent = t(fresh.paused ? 'queue.resume' : 'queue.pause');
       const active = fresh.active;
       bar.hidden = !active;
       progress.textContent = active
-        ? `${active.percent}%, ${size(active.rate)}/s from ${active.peers} peers`
-        : `${count(fresh.count)} ${fresh.count === 1 ? 'game' : 'games'}`;
+        ? t('queue.progress', { percent: active.percent, rate: size(active.rate), peers: active.peers })
+        : t('games', { count: fresh.count });
       if (active) fill.style.width = `${active.percent}%`;
     });
 
@@ -104,7 +105,7 @@ export function queue(mount, { onError }) {
     torrents.replaceChildren(
       ...(data.groups.length > 0
         ? [
-            el('h2', {}, 'Torrents'),
+            el('h2', {}, t('queue.torrents')),
             el(
               'div',
               { className: 'list' },
@@ -118,17 +119,17 @@ export function queue(mount, { onError }) {
     if (roms.length > 0) {
       const hidden = data.count - roms.length;
       list.appendGroup(
-        'In the queue',
-        hidden > 0 ? `the next ${count(roms.length)}, ${count(hidden)} more after them` : '',
+        t('queue.inQueue'),
+        hidden > 0 ? t('queue.next', { shown: roms.length, hidden }) : '',
         roms.map((rom) => ({ ...rom, key: `q${rom.queueId}` })),
       );
     }
     if (downloaded.length > 0) {
       const rest = data.downloadedTotal - downloaded.length;
       list.appendGroup(
-        'Recently downloaded',
-        rest > 0 ? `${count(rest)} more are marked in the lists` : '',
-        downloaded.map((rom) => ({ ...rom, key: `d${rom.downloadedId}`, removeLabel: 'Forget, keep the file' })),
+        t('queue.recent'),
+        rest > 0 ? t('queue.marked', { count: rest }) : '',
+        downloaded.map((rom) => ({ ...rom, key: `d${rom.downloadedId}`, removeLabel: t('queue.forget') })),
       );
     }
   }
@@ -145,20 +146,19 @@ export function queue(mount, { onError }) {
     });
 
     running = data.working;
-    summary.textContent = `${count(data.count)} ${data.count === 1 ? 'game' : 'games'}, ${size(data.bytes)} in ${count(data.groups.length)} ${data.groups.length === 1 ? 'torrent' : 'torrents'}`;
+    summary.textContent = t('queue.summary', {
+      games: t('games', { count: data.count }),
+      size: size(data.bytes),
+      torrents: t('torrents', { count: data.groups.length }),
+    });
     free.textContent =
       data.bytes > data.freeBytes
-        ? `Will not fit: only ${size(data.freeBytes)} free in the library`
-        : `${size(data.freeBytes)} free in the library`;
+        ? t('queue.wontFit', { free: size(data.freeBytes) })
+        : t('queue.free', { free: size(data.freeBytes) });
     free.className = data.bytes > data.freeBytes ? 'warn' : 'muted';
-    hint.textContent =
-      data.count === 0
-        ? 'Nothing is waiting. Find a game in Search or Browse and press its download button.'
-        : data.working
-          ? 'Downloading. Move a torrent up to have it fetched sooner.'
-          : 'Paused. Press Resume to continue; progress made so far is kept.';
+    hint.textContent = data.count === 0 ? t('queue.empty') : data.working ? t('queue.working') : t('queue.stopped');
     runButton.hidden = data.count === 0;
-    runButton.textContent = data.working ? 'Pause all' : 'Resume';
+    runButton.textContent = t(data.working ? 'queue.pauseAll' : 'queue.resume');
     retryButton.hidden = !data.failed;
   }
 
@@ -202,8 +202,8 @@ export function queue(mount, { onError }) {
 
   function open() {
     shape = '';
-    summary.textContent = 'Loading queue…';
-    mount.replaceChildren(el('h1', {}, 'Queue'), summary, free, hint, actions, list.node, torrents);
+    summary.textContent = t('queue.loading');
+    mount.replaceChildren(el('h1', {}, t('nav.queue')), summary, free, hint, actions, list.node, torrents);
     start();
   }
 
