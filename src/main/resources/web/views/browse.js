@@ -1,5 +1,6 @@
 import * as api from '../api.js';
-import { badge, button, count, el, icon, loadOnScroll, size, spinner, toast } from '../dom.js';
+import { badge, button, el, icon, loadOnScroll, size, spinner, toast } from '../dom.js';
+import { t } from '../i18n.js';
 import { games } from './games.js';
 
 /**
@@ -27,22 +28,22 @@ export function browse(mount, { onError }) {
   const crumbs = (...parts) =>
     el(
       'nav',
-      { className: 'crumbs', ariaLabel: 'Where you are' },
+      { className: 'crumbs', ariaLabel: t('browse.crumbs') },
       parts.map((part) =>
         part.onClick ? button(part.label, part.onClick, 'link') : el('span', { ariaCurrent: 'page' }, part.label),
       ),
     );
 
-  const amount = (files, bytes) => `${count(files)} ${files === 1 ? 'file' : 'files'}, ${size(bytes)}`;
+  const amount = (files, bytes) => `${t('files', { count: files })}, ${size(bytes)}`;
 
   // a modal question: queueing a folder can mean terabytes, so Cancel holds the focus
   const confirmation = el('dialog', { className: 'dialog', ariaLabelledby: 'queue-all-title' });
   document.body.append(confirmation);
 
   function askToQueue(label, files, bytes, collection, platformId) {
-    const no = button('Cancel', () => confirmation.close(), 'ghost');
+    const no = button(t('action.cancel'), () => confirmation.close(), 'ghost');
     const yes = button(
-      'Queue all',
+      t('browse.queueAll'),
       async () => {
         yes.disabled = true;
         try {
@@ -50,11 +51,11 @@ export function browse(mount, { onError }) {
           confirmation.close();
           toast(
             answer.fits
-              ? `Queued ${count(answer.added)} ${answer.added === 1 ? 'file' : 'files'} from ${label}`
-              : `Will not fit: ${size(answer.bytes)} needed, ${size(answer.freeBytes)} free after the queue`,
+              ? t('browse.queued', { files: t('files', { count: answer.added }), label })
+              : t('browse.wontFit', { needed: size(answer.bytes), free: size(answer.freeBytes) }),
           );
         } catch (error) {
-          toast(`Could not queue ${label}: ${error.message}`);
+          toast(t('browse.queueFailed', { label, message: error.message }));
         } finally {
           yes.disabled = false;
         }
@@ -62,13 +63,9 @@ export function browse(mount, { onError }) {
       'primary',
     );
     confirmation.replaceChildren(
-      el('h2', { id: 'queue-all-title' }, `Queue all of ${label}?`),
+      el('h2', { id: 'queue-all-title' }, t('browse.confirm', { label })),
       el('p', { className: 'amount' }, amount(files, bytes)),
-      el(
-        'p',
-        { className: 'muted' },
-        'Downloads start right away unless the queue is paused. Files already in your library are skipped.',
-      ),
+      el('p', { className: 'muted' }, t('browse.confirmNote')),
       el('div', { className: 'actions' }, [no, yes]),
     );
     confirmation.showModal();
@@ -81,8 +78,8 @@ export function browse(mount, { onError }) {
       () => askToQueue(label, files, bytes, collection, platformId),
       'icon-button get',
     );
-    node.title = `Queue all of ${label}`;
-    node.setAttribute('aria-label', `Queue all of ${label}, ${amount(files, bytes)}`);
+    node.title = t('browse.queueAllOf', { label });
+    node.setAttribute('aria-label', `${t('browse.queueAllOf', { label })}, ${amount(files, bytes)}`);
     return node;
   };
 
@@ -92,13 +89,13 @@ export function browse(mount, { onError }) {
   async function showCollections() {
     const mine = ++generation;
     remember();
-    render(spinner('Loading collections…'));
+    render(spinner(t('browse.loadingCollections')));
     try {
       const { collections } = await api.collections();
       if (mine !== generation) return;
       render(
-        el('h1', {}, 'Browse'),
-        el('p', { className: 'muted' }, 'Each collection is a different preservation group’s set of dumps.'),
+        el('h1', {}, t('nav.browse')),
+        el('p', { className: 'muted' }, t('browse.intro')),
         el(
           'div',
           { className: 'cards' },
@@ -107,11 +104,7 @@ export function browse(mount, { onError }) {
               () => showPlatforms(c.name),
               [
                 el('strong', {}, c.name),
-                el(
-                  'span',
-                  { className: 'muted' },
-                  `${count(c.platformCount)} ${c.platformCount === 1 ? 'platform' : 'platforms'}`,
-                ),
+                el('span', { className: 'muted' }, t('platforms', { count: c.platformCount })),
                 el('span', { className: 'n' }, amount(c.fileCount, c.bytes)),
               ],
               queueButton(c.name, c.fileCount, c.bytes, c.name),
@@ -127,17 +120,21 @@ export function browse(mount, { onError }) {
   async function showPlatforms(collection) {
     const mine = ++generation;
     remember(collection);
-    render(spinner('Loading platforms…'));
+    render(spinner(t('browse.loadingPlatforms')));
     try {
       const { platforms } = await api.platforms(collection);
       if (mine !== generation) return;
       const files = platforms.reduce((sum, p) => sum + p.fileCount, 0);
       const bytes = platforms.reduce((sum, p) => sum + p.bytes, 0);
       render(
-        crumbs({ label: 'Browse', onClick: showCollections }, { label: collection }),
+        crumbs({ label: t('nav.browse'), onClick: showCollections }, { label: collection }),
         el('div', { className: 'heading' }, [
           el('h1', {}, collection),
-          button(`Queue all, ${amount(files, bytes)}`, () => askToQueue(collection, files, bytes, collection), 'ghost'),
+          button(
+            t('browse.queueAllAmount', { amount: amount(files, bytes) }),
+            () => askToQueue(collection, files, bytes, collection),
+            'ghost',
+          ),
         ]),
         el(
           'div',
@@ -163,7 +160,7 @@ export function browse(mount, { onError }) {
 
   async function showPlatform(collection, key) {
     const mine = ++generation;
-    render(spinner('Loading platform…'));
+    render(spinner(t('browse.loadingPlatform')));
     try {
       const { platforms } = await api.platforms(collection);
       if (mine !== generation) return;
@@ -184,21 +181,21 @@ export function browse(mount, { onError }) {
     let more = true;
     let loading = false;
 
-    const status = el('p', { className: 'muted' }, 'Loading…');
-    const moreButton = button('Show more', () => loadMore(), 'ghost wide');
+    const status = el('p', { className: 'muted' }, t('loading'));
+    const moreButton = button(t('action.showMore'), () => loadMore(), 'ghost wide');
     moreButton.hidden = true;
     loadOnScroll(moreButton);
 
     render(
       crumbs(
-        { label: 'Browse', onClick: showCollections },
+        { label: t('nav.browse'), onClick: showCollections },
         { label: collection, onClick: () => showPlatforms(collection) },
         { label: platform.label },
       ),
       el('div', { className: 'heading' }, [
         el('h1', {}, platform.label),
         button(
-          `Queue all, ${amount(platform.fileCount, platform.bytes)}`,
+          t('browse.queueAllAmount', { amount: amount(platform.fileCount, platform.bytes) }),
           () => askToQueue(platform.label, platform.fileCount, platform.bytes, collection, platform.id),
           'ghost',
         ),
@@ -224,7 +221,11 @@ export function browse(mount, { onError }) {
         } else {
           list.append(page.roms);
         }
-        status.textContent = `${count(rows.length)} of ${count(platform.fileCount)} shown, landing in roms/${platform.folder}`;
+        status.textContent = t('browse.shown', {
+          shown: rows.length,
+          total: platform.fileCount,
+          folder: platform.folder,
+        });
         moreButton.hidden = !more;
       } catch (error) {
         if (mine === generation) onError(error, () => showRoms(collection, platform));

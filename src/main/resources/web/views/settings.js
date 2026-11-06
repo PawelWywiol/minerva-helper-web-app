@@ -1,5 +1,6 @@
 import * as api from '../api.js';
 import { button, el, icon, infiniteScroll, spinner } from '../dom.js';
+import { browserLocale, language, LANGUAGES, t } from '../i18n.js';
 
 /**
  * Download settings and the folder each platform lands in, inside the library mounted into the container.
@@ -38,11 +39,11 @@ export function settings(mount, { onError }) {
 
   // kept outside paint, so a settings change does not wipe the last check
   const vpnResult = el('div', { className: 'vpn', role: 'status' });
-  const vpnButton = button('Check VPN', () => checkVpn(), 'ghost');
+  const vpnButton = button(t('settings.vpnCheck'), () => checkVpn(), 'ghost');
 
   async function checkVpn() {
     vpnButton.disabled = true;
-    vpnResult.replaceChildren(el('p', { className: 'muted' }, 'Asking the VPN container…'));
+    vpnResult.replaceChildren(el('p', { className: 'muted' }, t('settings.vpnAsking')));
     try {
       const v = await api.vpn();
       const place = [v.city, v.region, v.country].filter(Boolean).filter((x, i, all) => all.indexOf(x) === i);
@@ -52,19 +53,19 @@ export function settings(mount, { onError }) {
         el('p', { className: up ? 'ok' : 'warn' }, [
           up ? icon('check') : null,
           up
-            ? 'Downloads go through the VPN.'
+            ? t('settings.vpnUp')
             : v.reachable
-              ? `The VPN is ${v.status || 'not running'}. Downloads are blocked until it reconnects.`
-              : 'No VPN found. This container does not run behind gluetun, so downloads would use your own connection.',
+              ? t('settings.vpnDown', { status: v.status || t('settings.vpnNotRunning') })
+              : t('settings.vpnMissing'),
         ]),
         el('dl', { className: 'facts' }, [
-          ...fact('Public address', v.public_ip),
-          ...fact('Location', place.join(', ')),
-          ...fact('Provider', v.organization),
+          ...fact(t('settings.publicAddress'), v.public_ip),
+          ...fact(t('settings.location'), place.join(', ')),
+          ...fact(t('settings.provider'), v.organization),
         ]),
       );
     } catch (error) {
-      vpnResult.replaceChildren(el('p', { className: 'error' }, `The check failed: ${error.message}`));
+      vpnResult.replaceChildren(el('p', { className: 'error' }, t('settings.vpnFailed', { message: error.message })));
     } finally {
       vpnButton.disabled = false;
     }
@@ -79,7 +80,7 @@ export function settings(mount, { onError }) {
         const node = el(
           'button',
           { type: 'button', className: choice === on ? '' : 'ghost' },
-          choice ? 'Load as I scroll' : 'Show more button',
+          t(choice ? 'settings.scrollOn' : 'settings.scrollOff'),
         );
         node.addEventListener('click', () => {
           infiniteScroll.set(choice);
@@ -87,6 +88,25 @@ export function settings(mount, { onError }) {
         });
         return node;
       }),
+    );
+  }
+
+  // the whole page is built in one language, so a new one takes a reload
+  function languages() {
+    const chosen = language.get();
+    return el(
+      'div',
+      { className: 'actions' },
+      ['', ...Object.keys(LANGUAGES)].map((code) =>
+        button(
+          code ? LANGUAGES[code] : t('settings.languageBrowser', { language: LANGUAGES[browserLocale] }),
+          () => {
+            language.set(code);
+            location.reload();
+          },
+          code === chosen ? '' : 'ghost',
+        ),
+      ),
     );
   }
 
@@ -101,7 +121,7 @@ export function settings(mount, { onError }) {
             type: 'button',
             className: on === data.unpackArchives ? '' : 'ghost',
           },
-          on ? 'Unpack' : 'Keep as downloaded',
+          t(on ? 'settings.unpackOn' : 'settings.unpackOff'),
         );
         button.addEventListener('click', () => apply({ unpackArchives: on }));
         return button;
@@ -112,8 +132,8 @@ export function settings(mount, { onError }) {
   function editor(platform) {
     const input = el('input', { type: 'text', value: platform.folder, id: 'folder' });
     const move = el('input', { type: 'checkbox', id: 'move', checked: true });
-    const save = el('button', { type: 'button' }, 'Save');
-    const cancel = el('button', { type: 'button', className: 'ghost' }, 'Cancel');
+    const save = el('button', { type: 'button' }, t('action.save'));
+    const cancel = el('button', { type: 'button', className: 'ghost' }, t('action.cancel'));
     save.addEventListener('click', () => {
       const folder = input.value.trim();
       if (!folder) return;
@@ -134,12 +154,12 @@ export function settings(mount, { onError }) {
       'div',
       { className: 'editor' },
       [
-        el('label', { htmlFor: 'folder' }, `Folder for ${platform.platformKey}`),
+        el('label', { htmlFor: 'folder' }, t('settings.folderFor', { platform: platform.platformKey })),
         input,
         platform.downloaded > 0
           ? el('label', { htmlFor: 'move', className: 'checkline' }, [
               move,
-              ` Move the ${platform.downloaded} file(s) already downloaded into the new folder`,
+              ` ${t('settings.moveFiles', { count: platform.downloaded })}`,
             ])
           : null,
         el('div', { className: 'actions' }, [save, cancel]),
@@ -150,7 +170,7 @@ export function settings(mount, { onError }) {
   function paint(data) {
     const rows = data.platforms.map((platform) => {
       if (editing === platform.platformKey) return editor(platform);
-      const change = el('button', { type: 'button', className: 'ghost small' }, 'Change');
+      const change = el('button', { type: 'button', className: 'ghost small' }, t('settings.change'));
       change.addEventListener('click', () => {
         editing = platform.platformKey;
         paint(data);
@@ -160,51 +180,46 @@ export function settings(mount, { onError }) {
         el(
           'span',
           { className: 'meta' },
-          `${platform.folder} · ${platform.queued + platform.downloaded} ROMs` +
-            (platform.mapped ? '' : ' · no standard folder'),
+          [
+            platform.folder,
+            t('roms', { count: platform.queued + platform.downloaded }),
+            platform.mapped ? null : t('settings.noStandardFolder'),
+          ]
+            .filter(Boolean)
+            .join(' · '),
         ),
         el('span', { className: 'buttons' }, change),
       ]);
     });
 
     mount.replaceChildren(
-      el('h1', {}, 'Settings'),
-      el(
-        'p',
-        { className: 'muted' },
-        'Downloads land in the library, one folder per platform (ES-DE names by default).',
-      ),
+      el('h1', {}, t('nav.settings')),
+      el('p', { className: 'muted' }, t('settings.intro')),
       el('h2', {}, 'VPN'),
-      el('p', { className: 'muted' }, 'See the address and place the archive sees when this app downloads.'),
+      el('p', { className: 'muted' }, t('settings.vpnIntro')),
       el('div', { className: 'actions' }, vpnButton),
       vpnResult,
-      el('h2', {}, 'Downloads at once'),
-      el('p', { className: 'muted' }, 'More is not always faster — each torrent has to find its own sharers.'),
+      el('h2', {}, t('settings.concurrency')),
+      el('p', { className: 'muted' }, t('settings.concurrencyIntro')),
       concurrency(data),
-      el('h2', {}, 'Unpack when needed'),
-      el(
-        'p',
-        { className: 'muted' },
-        'Disc games arrive zipped but no emulator can open them that way. Left on, they are ' +
-          'unpacked as they land and the zip is thrown away.',
-      ),
+      el('h2', {}, t('settings.unpack')),
+      el('p', { className: 'muted' }, t('settings.unpackIntro')),
       unpacking(data),
-      el('h2', {}, 'Long lists'),
-      el(
-        'p',
-        { className: 'muted' },
-        'Load the next games automatically when you reach the bottom of a list. Remembered in this browser only.',
-      ),
+      el('h2', {}, t('settings.lists')),
+      el('p', { className: 'muted' }, t('settings.listsIntro')),
       scrolling(),
-      el('h2', {}, 'Where each platform lands'),
+      el('h2', {}, t('settings.language')),
+      el('p', { className: 'muted' }, t('settings.languageIntro')),
+      languages(),
+      el('h2', {}, t('settings.folders')),
       rows.length === 0
-        ? el('p', { className: 'muted' }, 'Queue something to see where it will go.')
+        ? el('p', { className: 'muted' }, t('settings.foldersEmpty'))
         : el('div', { className: 'list' }, rows),
     );
   }
 
   async function show() {
-    mount.replaceChildren(spinner('Loading settings…'));
+    mount.replaceChildren(spinner(t('settings.loading')));
     try {
       paint(await api.settings());
     } catch (error) {

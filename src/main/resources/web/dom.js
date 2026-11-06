@@ -1,5 +1,7 @@
 /** The whole view layer: build nodes, format numbers. No framework, because six screens do not need one. */
 
+import { decimal, number, t } from './i18n.js';
+
 export function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(props)) {
@@ -76,9 +78,9 @@ export function highlight(text, match) {
 }
 
 export function getState(rom) {
-  if (rom.queued) return { icon: 'clock', label: 'Queued', hint: 'Remove from the queue' };
-  if (rom.downloaded) return { icon: 'check', label: 'In library', hint: 'Already in your library' };
-  return { icon: 'download', label: 'Download', hint: `Download to roms/${rom.folder}` };
+  if (rom.queued) return { icon: 'clock', label: t('rom.queued'), hint: t('rom.unqueue') };
+  if (rom.downloaded) return { icon: 'check', label: t('rom.inLibrary'), hint: t('rom.alreadyInLibrary') };
+  return { icon: 'download', label: t('rom.download'), hint: t('rom.downloadTo', { folder: rom.folder }) };
 }
 
 /** Sets of one system differ by a suffix, "Nintendo - NES (Headered)" against "(Headerless)". */
@@ -87,18 +89,18 @@ export const variant = (rom) => rom.platformKey?.match(/\(([^)]+)\)$/)?.[1] ?? '
 /** Another version of the same game, in the same folder, is already kept or on its way. */
 export function similarNote(rom) {
   if (rom.downloaded || rom.queued || !rom.similar) return '';
-  return rom.similar === 'library' ? 'Another version in library' : 'Another version queued';
+  return t(rom.similar === 'library' ? 'rom.similarLibrary' : 'rom.similarQueued');
 }
 
-export const count = (value) => new Intl.NumberFormat().format(value);
+export const count = number;
 
 /** Matches the app's own formatSize: decimal units, one decimal place. */
 export function size(bytes) {
-  if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(1)} TB`;
-  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
-  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
-  if (bytes >= 1e3) return `${Math.floor(bytes / 1e3)} kB`;
-  return `${bytes} B`;
+  if (bytes >= 1e12) return `${decimal(bytes / 1e12)} TB`;
+  if (bytes >= 1e9) return `${decimal(bytes / 1e9)} GB`;
+  if (bytes >= 1e6) return `${decimal(bytes / 1e6)} MB`;
+  if (bytes >= 1e3) return `${number(Math.floor(bytes / 1e3))} kB`;
+  return `${number(bytes)} B`;
 }
 
 export function button(label, onClick, className = '') {
@@ -107,11 +109,11 @@ export function button(label, onClick, className = '') {
   return node;
 }
 
-export const spinner = (label = 'Loading…') => el('p', { className: 'muted' }, label);
+export const spinner = (label = t('loading')) => el('p', { className: 'muted' }, label);
 
 /** The ES-DE folder a game lands in, coloured by maker so a mixed list reads at a glance. */
 export const badge = (folder, family = 'other') =>
-  el('span', { className: `badge f-${family}`, title: `Lands in roms/${folder}` }, folder);
+  el('span', { className: `badge f-${family}`, title: t('rom.landsIn', { folder }) }, folder);
 
 const SCROLL_KEY = 'minerva.infiniteScroll';
 

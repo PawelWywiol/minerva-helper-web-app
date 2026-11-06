@@ -1,5 +1,6 @@
 import * as api from '../api.js';
 import { badge, button, el, getState, icon, loadHidden, similarNote, size, splitName, toast, variant } from '../dom.js';
+import { t } from '../i18n.js';
 
 const FIRST_VERSIONS = 3;
 const MORE_VERSIONS = 5;
@@ -10,7 +11,7 @@ const MORE_VERSIONS = 5;
  * same panel slides over the list and closes back into it.
  */
 export function detail({ toggleQueue, toggleFavourite, onClose }) {
-  const node = el('aside', { className: 'detail', ariaLabel: 'Game details' });
+  const node = el('aside', { className: 'detail', ariaLabel: t('detail.label') });
   let current = null;
   let full = null;
   let failed = null;
@@ -35,12 +36,7 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
     current = null;
     full = null;
     generation++;
-    node.replaceChildren(
-      el('div', { className: 'empty' }, [
-        icon('browse'),
-        el('p', {}, 'Pick a game to see its cover, where it lands and its checksums.'),
-      ]),
-    );
+    node.replaceChildren(el('div', { className: 'empty' }, [icon('browse'), el('p', {}, t('detail.empty'))]));
   }
 
   function paint() {
@@ -48,17 +44,17 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
     const [title] = splitName(rom.name);
     const close = el(
       'button',
-      { type: 'button', className: 'icon-button close', ariaLabel: 'Close details' },
+      { type: 'button', className: 'icon-button close', ariaLabel: t('detail.close') },
       icon('close'),
     );
     close.addEventListener('click', onClose);
 
     const get = el('button', { type: 'button', className: 'primary' }, [
       icon(rom.queued ? 'close' : 'download'),
-      rom.queued ? 'Remove from queue' : rom.downloaded ? 'Download again' : 'Download',
+      t(rom.queued ? 'detail.unqueue' : rom.downloaded ? 'detail.downloadAgain' : 'rom.download'),
     ]);
     get.addEventListener('click', () => toggleQueue(rom));
-    const favLabel = rom.favourite ? 'Remove from favourites' : 'Add to favourites';
+    const favLabel = t(rom.favourite ? 'rom.unfavourite' : 'rom.favourite');
     const fav = el(
       'button',
       {
@@ -73,11 +69,11 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
     fav.addEventListener('click', () => toggleFavourite(rom));
 
     const cover = full?.cover
-      ? el('img', { className: 'cover', src: full.cover, alt: `Cover of ${full.title || title}` })
+      ? el('img', { className: 'cover', src: full.cover, alt: t('detail.coverOf', { title: full.title || title }) })
       : el(
           'div',
           { className: `cover blank f-${rom.family}` },
-          full || failed ? 'No cover found' : 'Looking for a cover…',
+          t(full || failed ? 'detail.noCover' : 'detail.lookingForCover'),
         );
 
     const parts = [
@@ -85,24 +81,25 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
       cover,
       el('h2', {}, full?.title || title),
       el('p', { className: 'file' }, rom.name),
-      failed ? el('p', { className: 'error' }, `Details could not be loaded: ${failed}`) : null,
+      failed ? el('p', { className: 'error' }, t('detail.failed', { message: failed })) : null,
       el('div', { className: 'lands' }, [
         badge(rom.folder, rom.family),
-        el('div', {}, [el('strong', {}, `roms/${rom.folder}`), el('span', {}, `${rom.platform} in ES-DE`)]),
+        el('div', {}, [
+          el('strong', {}, `roms/${rom.folder}`),
+          el('span', {}, t('detail.inEsde', { platform: rom.platform })),
+        ]),
       ]),
-      rom.downloaded && !rom.queued ? el('p', { className: 'ok' }, [icon('check'), 'Already in your library']) : null,
-      similarNote(rom)
-        ? el('p', { className: 'similar' }, `${similarNote(rom)}: check before downloading this one too.`)
-        : null,
+      rom.downloaded && !rom.queued ? el('p', { className: 'ok' }, [icon('check'), t('rom.alreadyInLibrary')]) : null,
+      similarNote(rom) ? el('p', { className: 'similar' }, t('detail.similar', { note: similarNote(rom) })) : null,
       el('div', { className: 'actions' }, [get, fav]),
       tabs(),
       tab === 'details'
         ? el('dl', { className: 'facts', role: 'tabpanel' }, [
-            ...fact('Size', size(rom.size)),
-            ...fact('Path', path(rom)),
-            ...fact('Torrent', full ? full.torrentPath.split('/').pop() : '…'),
-            ...fact('MD5', full ? full.md5 || 'not listed' : '…'),
-            ...fact('SHA-1', full ? full.sha1 || 'not listed' : '…'),
+            ...fact(t('detail.size'), size(rom.size)),
+            ...fact(t('detail.path'), path(rom)),
+            ...fact(t('detail.torrent'), full ? full.torrentPath.split('/').pop() : '…'),
+            ...fact('MD5', full ? full.md5 || t('detail.notListed') : '…'),
+            ...fact('SHA-1', full ? full.sha1 || t('detail.notListed') : '…'),
           ])
         : versionsPanel(),
     ];
@@ -114,12 +111,14 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
   }
 
   function tabs() {
-    const label = others?.loaded ? `Other versions (${others.roms.length}${others.more ? '+' : ''})` : 'Other versions';
+    const label = others?.loaded
+      ? t('detail.versionsCount', { count: `${others.roms.length}${others.more ? '+' : ''}` })
+      : t('detail.versions');
     return el(
       'div',
       { className: 'tabs', role: 'tablist' },
       [
-        ['details', 'Details'],
+        ['details', t('detail.details')],
         ['versions', label],
       ].map(([key, text]) => {
         const node = button(
@@ -156,7 +155,7 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
       others.loaded = true;
     } catch (error) {
       if (mine !== generation) return;
-      toast(`Could not load other versions: ${error.message}`);
+      toast(t('detail.versionsFailed', { message: error.message }));
     }
     others.loading = false;
     paint();
@@ -172,13 +171,13 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
           el('span', {}, size(version.size)),
           el('span', {}, version.collection),
           variant(version) ? el('span', {}, variant(version)) : null,
-          version.downloaded ? el('span', { className: 'ok' }, 'In library') : null,
+          version.downloaded ? el('span', { className: 'ok' }, t('rom.inLibrary')) : null,
         ]),
       ],
       () => show(version),
       'pick',
     );
-    open.title = 'Show this version';
+    open.title = t('detail.showVersion');
     const get = button(
       icon(state.icon),
       async () => {
@@ -195,12 +194,12 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
   }
 
   function versionsPanel() {
-    if (!others?.loaded) return el('p', { className: 'muted', role: 'tabpanel' }, 'Looking for other versions…');
+    if (!others?.loaded) return el('p', { className: 'muted', role: 'tabpanel' }, t('detail.lookingForVersions'));
     if (others.roms.length === 0) {
-      return el('p', { className: 'muted', role: 'tabpanel' }, 'No other version of this game in this system.');
+      return el('p', { className: 'muted', role: 'tabpanel' }, t('detail.noVersions'));
     }
     const more = others.more
-      ? button(others.loading ? 'Loading…' : 'More versions', () => loadVersions(), 'link more-versions')
+      ? button(t(others.loading ? 'loading' : 'action.moreVersions'), () => loadVersions(), 'link more-versions')
       : null;
     if (more) more.disabled = others.loading;
     return el('div', { className: 'versions', role: 'tabpanel' }, [...others.roms.map(versionRow), more]);

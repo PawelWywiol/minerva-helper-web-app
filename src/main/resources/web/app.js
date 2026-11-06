@@ -1,5 +1,6 @@
 import * as api from './api.js';
 import { button, el, icon } from './dom.js';
+import { t } from './i18n.js';
 import { browse } from './views/browse.js';
 import { favourites } from './views/favourites.js';
 import { home } from './views/home.js';
@@ -20,10 +21,10 @@ function shell() {
 
   const input = el('input', {
     type: 'search',
-    placeholder: 'Search games or systems, like “nes mario”',
+    placeholder: t('search.placeholder'),
     autocomplete: 'off',
     spellcheck: false,
-    ariaLabel: 'Search games or systems',
+    ariaLabel: t('search.label'),
   });
 
   const setQuery = (value) => {
@@ -39,22 +40,20 @@ function shell() {
         el(
           'p',
           { className: 'error' },
-          error instanceof api.NoCatalogue
-            ? 'The catalogue is not downloaded yet. Start it from Home.'
-            : `Something went wrong: ${error.message}`,
+          error instanceof api.NoCatalogue ? t('error.noCatalogue') : t('error.generic', { message: error.message }),
         ),
-        button('Try again', retry, 'ghost'),
+        button(t('action.retry'), retry, 'ghost'),
       );
     return { mount, ...factory(mount, { onError, setQuery, ...extra }) };
   };
 
   const views = {
-    home: { label: 'Home', icon: 'home', ...make(home) },
-    search: { label: 'Search', icon: 'search', ...make(search) },
-    browse: { label: 'Browse', icon: 'browse', ...make(browse) },
-    favourites: { label: 'Favourites', icon: 'heart', ...make(favourites) },
-    queue: { label: 'Queue', icon: 'queue', ...make(queue) },
-    settings: { label: 'Settings', icon: 'settings', ...make(settings) },
+    home: { label: t('nav.home'), icon: 'home', ...make(home) },
+    search: { label: t('nav.search'), icon: 'search', ...make(search) },
+    browse: { label: t('nav.browse'), icon: 'browse', ...make(browse) },
+    favourites: { label: t('nav.favourites'), icon: 'heart', ...make(favourites) },
+    queue: { label: t('nav.queue'), icon: 'queue', ...make(queue) },
+    settings: { label: t('nav.settings'), icon: 'settings', ...make(settings) },
   };
 
   const queued = el('span', { className: 'count', hidden: true });
@@ -134,7 +133,7 @@ function shell() {
   window.addEventListener('hashchange', show);
 
   app.replaceChildren(
-    el('nav', { className: 'nav', ariaLabel: 'Sections' }, [
+    el('nav', { className: 'nav', ariaLabel: t('nav.sections') }, [
       el('a', { className: 'brand', href: '#home' }, [el('img', { src: '/favicon.svg', alt: '' }), 'Minerva']),
       ...links,
     ]),

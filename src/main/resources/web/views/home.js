@@ -1,5 +1,6 @@
 import * as api from '../api.js';
 import { button, count, el, size } from '../dom.js';
+import { t } from '../i18n.js';
 
 const POLL_MS = 1000;
 
@@ -28,29 +29,26 @@ export function home(mount, { setQuery }) {
   function catalogue(catalog) {
     switch (catalog.state) {
       case 'missing':
-        return [
-          el('p', {}, 'Download the catalogue first. It takes about 1.7 GB and a few minutes, once.'),
-          act('Download catalogue', () => api.syncCatalog()),
-        ];
+        return [el('p', {}, t('home.missing')), act(t('home.download'), () => api.syncCatalog())];
       case 'downloading':
       case 'importing': {
         const percent = catalog.total > 0 ? Math.floor((catalog.done * 100) / catalog.total) : 0;
         const text =
           catalog.state === 'downloading'
-            ? `Downloading the archive index: ${size(catalog.done)} of ${size(catalog.total)}`
-            : `Building the catalogue: ${count(catalog.done)} of ${count(catalog.total)} files`;
-        return [el('p', {}, `${text} (${percent}%)`), el('progress', { max: 100, value: percent })];
+            ? t('home.downloading', { done: size(catalog.done), total: size(catalog.total), percent })
+            : t('home.importing', { done: catalog.done, total: catalog.total, percent });
+        return [el('p', {}, text), el('progress', { max: 100, value: percent })];
       }
       case 'failed':
         return [
-          el('p', { className: 'error' }, `The catalogue could not be built: ${catalog.error || 'unknown error'}`),
-          act('Try again', () => api.syncCatalog()),
+          el('p', { className: 'error' }, t('home.failed', { message: catalog.error || t('home.unknownError') })),
+          act(t('action.retry'), () => api.syncCatalog()),
         ];
       default:
         return [
-          el('p', { className: 'muted' }, 'The catalogue is ready.'),
+          el('p', { className: 'muted' }, t('home.ready')),
           act(
-            'Check for a newer catalogue',
+            t('home.checkUpdate'),
             async () => {
               const { available } = await api.catalogUpdate();
               if (available) await api.syncCatalog(true);
@@ -72,30 +70,26 @@ export function home(mount, { setQuery }) {
       const [status, catalog] = await Promise.all([api.state(), api.catalog()]);
       const ready = catalog.state === 'ready';
       const parts = [
-        el('h1', {}, 'Your retro library'),
-        el(
-          'p',
-          { className: 'lead' },
-          'Find a game in the MiNERVA archive and it lands in the ES-DE folder of its system, ready to play.',
-        ),
+        el('h1', {}, t('home.title')),
+        el('p', { className: 'lead' }, t('home.lead')),
         ready
           ? el('div', { className: 'chips' }, [
-              el('span', { className: 'muted' }, 'Try'),
+              el('span', { className: 'muted' }, t('home.try')),
               ...['nes mario', 'amiga cd32', 'psx', 'snes zelda'].map((q) => button(q, () => setQuery(q), 'chip')),
             ])
           : null,
         el('div', { className: 'stats' }, [
-          stat(count(status.romCount), 'games in the catalogue', ready ? 'browse' : null),
-          stat(count(status.queued), 'waiting in the queue', 'queue'),
-          stat(count(status.downloaded), 'in your library', 'queue'),
+          stat(count(status.romCount), t('home.inCatalogue', { count: status.romCount }), ready ? 'browse' : null),
+          stat(count(status.queued), t('home.inQueue', { count: status.queued }), 'queue'),
+          stat(count(status.downloaded), t('home.inLibrary'), 'queue'),
         ]),
-        el('section', { className: 'panel' }, [el('h2', {}, 'Catalogue'), ...catalogue(catalog)]),
+        el('section', { className: 'panel' }, [el('h2', {}, t('home.catalogue')), ...catalogue(catalog)]),
         el('p', { className: 'muted small' }, `Minerva Helper ${status.version}`),
       ];
       mount.replaceChildren(...parts.filter(Boolean));
       if (catalog.state === 'downloading' || catalog.state === 'importing') timer = setTimeout(paint, POLL_MS);
     } catch (error) {
-      mount.replaceChildren(el('p', { className: 'error' }, error.message), button('Try again', paint, 'ghost'));
+      mount.replaceChildren(el('p', { className: 'error' }, error.message), button(t('action.retry'), paint, 'ghost'));
     }
   }
 
