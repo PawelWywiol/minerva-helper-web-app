@@ -98,6 +98,8 @@ export default {
   'detail.lookingForCover': 'Looking for a cover…',
   'detail.failed': 'Details could not be loaded: {message}',
   'detail.inEsde': '{platform} in ES-DE',
+  'detail.unmapped':
+    'ES-DE has no folder for this platform: the file goes to roms/{folder} and ES-DE will not show it.',
   'detail.similar': '{note}: check before downloading this one too.',
   'detail.details': 'Details',
   'detail.size': 'Size',

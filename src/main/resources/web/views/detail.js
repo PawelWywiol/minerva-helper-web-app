@@ -89,6 +89,7 @@ export function detail({ toggleQueue, toggleFavourite, onClose }) {
           el('span', {}, t('detail.inEsde', { platform: rom.platform })),
         ]),
       ]),
+      rom.mapped ? null : el('p', { className: 'warn' }, t('detail.unmapped', { folder: rom.folder })),
       rom.downloaded && !rom.queued ? el('p', { className: 'ok' }, [icon('check'), t('rom.alreadyInLibrary')]) : null,
       similarNote(rom) ? el('p', { className: 'similar' }, t('detail.similar', { note: similarNote(rom) })) : null,
       el('div', { className: 'actions' }, [get, fav]),

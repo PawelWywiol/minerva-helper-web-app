@@ -65,6 +65,7 @@ internal class RomView(
         target.put("folder", folder)
         target.put("platform", s.systems.labelFor(rom.platformKey, slug))
         target.put("family", s.systems.familyFor(slug))
+        target.put("mapped", s.settings.isMapped(rom.collection, rom.platformKey))
         target.put("queued", key in queued)
         target.put("downloaded", key in downloaded)
         target.put("favourite", Triple(rom.collection, rom.platformKey, rom.name) in favourites)

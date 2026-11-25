@@ -75,7 +75,7 @@ TOSEC,Nintendo/Super Famicom & Super Entertainment System,snes,manual,3914
 Eggman's Arcade Repository,!EXTRAS,arcade,collection,3871
 Redump,Nintendo - Wii - NKit RVZ [zstd-19-128k],wii,manual,3847
 No-Intro,IBM - PC and Compatibles (Digital) (NovelGameCollection),,unmapped,3825
-No-Intro,Nintendo - Wii U (Digital) (CDN),wiiu,auto,3776
+No-Intro,Nintendo - Wii U (Digital) (CDN),,unmapped,3776
 Internet Archive,aitus95,,none,3751
 No-Intro,Nintendo - Game Boy Advance,gba,auto,3688
 Redump,Sony - PlayStation Portable,psp,auto,3637
@@ -179,7 +179,7 @@ No-Intro,Nintendo - amiibo,,unmapped,1162
 Internet Archive,archiver_2020,,none,1161
 eXo,eXoWin3x,,unmapped,1146
 Internet Archive,cmpltromsets,,none,1142
-No-Intro,Nintendo - Wii U (Digital) (CDN) (Dev),wiiu,auto,1137
+No-Intro,Nintendo - Wii U (Digital) (CDN) (Dev),,unmapped,1137
 No-Intro,Unofficial - Sony - PlayStation Portable (UMD Video),psp,auto,1135
 TOSEC,Sega/Game Gear,gamegear,auto,1102
 No-Intro,Nintendo - Nintendo DSi (Digital),,unmapped,1068
@@ -262,7 +262,7 @@ Redump,Video CD,,unmapped,555
 No-Intro,Nintendo - Game Boy Color (Aftermarket),gbc,auto,554
 No-Intro,Sony - PlayStation Portable (PSN) (Minis) (Encrypted),psp,auto,553
 No-Intro,Sony - PlayStation Portable (PSN) (Minis) (Decrypted),psp,auto,553
-Redump,Nintendo - Wii U - WUX,,unmapped,553
+Redump,Nintendo - Wii U - WUX,wiiu,manual,553
 TOSEC-PIX,Atari/ST,atarist,alias,548
 Eggman's Arcade Repository,Konami Rhythm,arcade,collection,546
 TOSEC-PIX,Sony/PlayStation,psx,auto,540
@@ -451,7 +451,7 @@ TOSEC-PIX,Commodore/VIC20,vic20,auto,164
 T-En Collection,Microsoft - MSX2 [T-En] Collection,,unmapped,164
 TOSEC-PIX,Sega/Mega-CD & Sega CD,megacd,auto,161
 TOSEC,Radio-86RK/Radio-86RK,,unmapped,160
-No-Intro,Nintendo - Wii U (Digital) (CDN) (Lotcheck),wiiu,auto,159
+No-Intro,Nintendo - Wii U (Digital) (CDN) (Lotcheck),,unmapped,159
 Redump,Palm,palm,auto,159
 TOSEC,Tektronix/4400 Series,,unmapped,158
 No-Intro,Atari - Atari Lynx (LNX),atarilynx,auto,157
