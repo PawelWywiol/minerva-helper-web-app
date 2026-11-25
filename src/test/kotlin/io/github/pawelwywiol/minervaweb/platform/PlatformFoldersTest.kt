@@ -29,10 +29,14 @@ class PlatformFoldersTest {
     }
 
     @Test
-    fun `encrypted wii u cdn titles stay out of the es-de folder`() {
-        listOf("", " (Dev)", " (Lotcheck)").forEach {
-            assertFalse(folders.isMapped("No-Intro", "Nintendo - Wii U (Digital) (CDN)$it"))
-        }
+    fun `encrypted cdn titles stay out of the es-de folder`() {
+        listOf(
+            "Nintendo - Wii U (Digital) (CDN)",
+            "Nintendo - Wii U (Digital) (CDN) (Dev)",
+            "Nintendo - Wii U (Digital) (CDN) (Lotcheck)",
+            "Nintendo - Wii (Digital) (CDN)",
+            "Nintendo - Nintendo 3DS (Digital) (CDN)",
+        ).forEach { assertFalse(folders.isMapped("No-Intro", it), it) }
         assertEquals("wiiu", folders.folderFor("Redump", "Nintendo - Wii U - WUX"))
     }
 
