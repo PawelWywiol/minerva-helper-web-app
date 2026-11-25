@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.12](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.11...v0.1.12) (2026-11-25)
+
+### Bug Fixes
+
+* keep wii u cdn out of es-de folder, map wux, warn unmapped ([#52](https://github.com/PawelWywiol/minerva-helper-web-app/issues/52)) ([84f9996](https://github.com/PawelWywiol/minerva-helper-web-app/commit/84f99966c685a21742fb7d339b14639f5e6b9d64))
+* start queued torrents in free download slots mid-run ([#51](https://github.com/PawelWywiol/minerva-helper-web-app/issues/51)) ([d3fa1fc](https://github.com/PawelWywiol/minerva-helper-web-app/commit/d3fa1fcd6fc909b68bf2e88ef6355c45dbcca7fb))
+
 ## [0.1.11](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.10...v0.1.11) (2026-11-06)
 
 ### Features
