@@ -8,17 +8,15 @@ import io.github.pawelwywiol.minervaweb.queue.Active
 import io.github.pawelwywiol.minervaweb.queue.DownloadQueue
 import io.github.pawelwywiol.minervaweb.queue.DownloadState
 import io.github.pawelwywiol.minervaweb.queue.QueueItem
+import io.github.pawelwywiol.minervaweb.settings.MAX_CONCURRENT_DOWNLOADS
 import io.github.pawelwywiol.minervaweb.settings.Settings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.ConnectException
@@ -31,6 +29,7 @@ import kotlin.io.path.fileSize
 import kotlin.io.path.isRegularFile
 
 private const val PERCENT = 100
+private const val TICK_MS = 1000L
 
 class DownloadRunner(
     private val queue: DownloadQueue,
@@ -124,18 +123,23 @@ class DownloadRunner(
     private suspend fun runOnce() {
         if (pendingGroups().isEmpty()) return
         try {
-            val limit = settings.concurrentDownloads
-            downloaderFactory(limit).use { downloader ->
+            downloaderFactory(MAX_CONCURRENT_DOWNLOADS).use { downloader ->
                 coroutineScope {
-                    // re-read between batches so a game added mid-run is picked up; failed/paused are not pending
+                    // free slots are refilled every tick, so new games and a changed limit apply mid-run
+                    val running = mutableMapOf<String, Job>()
                     while (true) {
-                        val pending = pendingGroups()
-                        if (pending.isEmpty()) break
-                        val slots = Semaphore(limit)
-                        pending
-                            .map { (path, items) ->
-                                async { slots.withPermit { downloadGroup(downloader, path, items) } }
-                            }.awaitAll()
+                        running.values.removeAll { it.isCompleted }
+                        val free = settings.concurrentDownloads - running.size
+                        pendingGroups()
+                            .filterKeys { it !in running }
+                            .entries
+                            .take(free.coerceAtLeast(0))
+                            .forEach { (path, items) ->
+                                running[path] =
+                                    launch { downloadGroup(downloader, path, items) }
+                            }
+                        if (running.isEmpty()) break
+                        delay(TICK_MS)
                     }
                 }
             }

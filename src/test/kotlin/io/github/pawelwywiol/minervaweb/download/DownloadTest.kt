@@ -1,5 +1,6 @@
 package io.github.pawelwywiol.minervaweb.download
 
+import com.sun.net.httpserver.HttpServer
 import io.github.pawelwywiol.minervaweb.catalog.CatalogReader
 import io.github.pawelwywiol.minervaweb.download.LocalSwarm.Companion.isolate
 import io.github.pawelwywiol.minervaweb.placement.FilePlacement
@@ -14,11 +15,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import java.net.InetSocketAddress
 import java.net.URI
 import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+import java.util.concurrent.CountDownLatch
 import kotlin.io.path.copyTo
 import kotlin.io.path.exists
 import kotlin.io.path.readBytes
@@ -176,6 +179,65 @@ class DownloadTest {
         assertFalse(dir.resolve("library/roms/x/a.nes").exists())
         scope.cancel()
         queue.close()
+    }
+
+    @Test
+    fun `a torrent added mid-run starts in a free slot without waiting for the running one`() {
+        val release = CountDownLatch(1)
+        val server =
+            HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+                createContext("/") { exchange ->
+                    release.await()
+                    exchange.sendResponseHeaders(404, -1)
+                    exchange.close()
+                }
+                start()
+            }
+        val torrentPath = "No-Intro/pack.torrent"
+        val torrents = Files.createDirectories(dir.resolve("torrents"))
+        swarm.torrent.copyTo(torrents.resolve(torrentPath.replace(Regex("[^A-Za-z0-9.-]"), "_")))
+        val queue = DownloadQueue(dir.resolve("queue.db"))
+        val settings = Settings(dir.resolve("s.json")).apply { update(concurrent = 2) }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val cache = TorrentCache(torrents, HttpClient.newHttpClient(), URI("http://127.0.0.1:${server.address.port}/"))
+        val placement = FilePlacement(dir.resolve("library/roms"))
+        val runner = DownloadRunner(queue, settings, cache, placement, dir.resolve("staging"), scope) { downloader() }
+
+        val stuck = CatalogReader.Rom(1, "stuck.nes", 1, "No-Intro", "x", "No-Intro/slow.torrent", 0, null, null)
+        val bytes = swarm.content.getValue("c.nes")
+        val rom =
+            CatalogReader.Rom(
+                2,
+                "c.nes",
+                bytes.size.toLong(),
+                "No-Intro",
+                "x",
+                torrentPath,
+                swarm.index("c.nes"),
+                null,
+                null,
+            )
+        try {
+            runner.toggle(stuck)
+            runBlocking {
+                withTimeout(TIMEOUT_MS) {
+                    while (queue.all().single().state !=
+                        DownloadState.DOWNLOADING
+                    ) {
+                        delay(POLL_MS)
+                    }
+                }
+            }
+            runner.toggle(rom)
+
+            val done = runBlocking { withTimeoutOrNull(TIMEOUT_MS) { while (!queue.isDownloaded(rom)) delay(POLL_MS) } }
+            assertNotNull(done, "not downloaded: queue=${queue.all()} active=${queue.active}")
+        } finally {
+            release.countDown()
+            scope.cancel()
+            server.stop(0)
+            queue.close()
+        }
     }
 
     private companion object {
