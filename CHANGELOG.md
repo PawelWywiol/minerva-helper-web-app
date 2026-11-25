@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.13](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.12...v0.1.13) (2026-11-25)
+
+### Bug Fixes
+
+* keep encrypted wii and 3ds cdn out of es-de folders ([#54](https://github.com/PawelWywiol/minerva-helper-web-app/issues/54)) ([811c8ad](https://github.com/PawelWywiol/minerva-helper-web-app/commit/811c8adb2cb66c87e5110c3f31db7421478b71be))
+
 ## [0.1.12](https://github.com/PawelWywiol/minerva-helper-web-app/compare/v0.1.11...v0.1.12) (2026-11-25)
 
 ### Bug Fixes
