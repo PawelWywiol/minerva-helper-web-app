@@ -1,4 +1,4 @@
-FROM gradle:9.8.2-jdk25 AS build
+FROM gradle:9.9.2-jdk25 AS build
 WORKDIR /src
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties package.json ./
 COPY gradle gradle
