@@ -108,6 +108,7 @@ export default {
   'detail.lookingForCover': 'Szukam okładki…',
   'detail.failed': 'Nie udało się wczytać szczegółów: {message}',
   'detail.inEsde': '{platform} w ES-DE',
+  'detail.unmapped': 'ES-DE nie ma folderu dla tej platformy: plik trafi do roms/{folder} i ES-DE go nie pokaże.',
   'detail.similar': '{note}: sprawdź, zanim pobierzesz także tę.',
   'detail.details': 'Szczegóły',
   'detail.size': 'Rozmiar',

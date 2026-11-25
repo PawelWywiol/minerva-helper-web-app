@@ -12,6 +12,7 @@ import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -82,6 +83,7 @@ class CatalogRoutesTest {
             assertEquals("No-Intro/nes.torrent", detail["torrentPath"]?.jsonPrimitive?.content)
             assertEquals(TestCatalog.MD5, detail["md5"]?.jsonPrimitive?.content)
             assertEquals("nes", detail["folder"]?.jsonPrimitive?.content)
+            assertEquals(true, detail["mapped"]?.jsonPrimitive?.boolean)
             assertEquals(HttpStatusCode.NotFound, get("/api/roms/12345").status)
         }
 

@@ -2,6 +2,7 @@ package io.github.pawelwywiol.minervaweb.platform
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class PlatformFoldersTest {
     private val folders = PlatformFolders()
@@ -25,6 +26,14 @@ class PlatformFoldersTest {
             "nintendo-nintendo-music-tracks",
             folders.folderFor("No-Intro", "Nintendo - Nintendo Music (Tracks)"),
         )
+    }
+
+    @Test
+    fun `encrypted wii u cdn titles stay out of the es-de folder`() {
+        listOf("", " (Dev)", " (Lotcheck)").forEach {
+            assertFalse(folders.isMapped("No-Intro", "Nintendo - Wii U (Digital) (CDN)$it"))
+        }
+        assertEquals("wiiu", folders.folderFor("Redump", "Nintendo - Wii U - WUX"))
     }
 
     @Test
